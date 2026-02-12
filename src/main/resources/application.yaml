@@ -19,4 +19,9 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
-    baseline-on-migrate: true
+    baseline-on-migrate: false
+
+taskflow:
+  jwt:
+    secret: "CHANGE_ME_TO_A_LONG_RANDOM_SECRET_32+_CHARS"
+    access-token-minutes: 120
