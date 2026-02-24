@@ -11,6 +11,14 @@ public class AppException extends RuntimeException {
         this.code = code;
         this.status = status;
     }
+    public AppException(ErrorCode code, HttpStatus status) {
+        this(code, status, code.name());
+    }
+
+    public AppException(ErrorCode code, String message) {
+        this(code, HttpStatus.BAD_REQUEST, message);
+    }
+
 
     public ErrorCode getCode() { return code; }
     public HttpStatus getStatus() { return status; }
