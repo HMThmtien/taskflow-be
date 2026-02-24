@@ -7,15 +7,24 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 public class UserPrincipal implements UserDetails {
+
     private final UserEntity user;
 
     public UserPrincipal(UserEntity user) {
         this.user = user;
     }
 
-    public UserEntity getUser() { return user; }
+    public UserEntity getUser() {
+        return user;
+    }
+
+    // ✅ THÊM CÁI NÀY
+    public UUID getId() {
+        return user.getId();
+    }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -23,10 +32,14 @@ public class UserPrincipal implements UserDetails {
     }
 
     @Override
-    public String getPassword() { return user.getPasswordHash(); }
+    public String getPassword() {
+        return user.getPasswordHash();
+    }
 
     @Override
-    public String getUsername() { return user.getUsername(); }
+    public String getUsername() {
+        return user.getUsername();
+    }
 
     @Override
     public boolean isAccountNonExpired() { return true; }

@@ -9,5 +9,9 @@ public enum ErrorCode {
     NOT_FOUND,
     PROJECT_NOT_FOUND,
     ISSUE_NOT_FOUND,
-    BAD_REQUEST
+    BAD_REQUEST,
+    INVALID_TOKEN,
+    ACCESS_DENIED,
+    USER_NOT_FOUND,
+    MEMBER_NOT_FOUND,
 }

@@ -24,5 +24,6 @@ spring:
 
 taskflow:
   jwt:
-    secret: "CHANGE_ME_TO_A_LONG_RANDOM_SECRET_32+_CHARS"
+    secret: cUNotG6VBRXJ+MKoQp5BvohOVKUfXE6JbTPfJUGeEwo=
     access-token-minutes: 120
+    refresh-ttl: 2592000000  # 30 ngày (milliseconds)
