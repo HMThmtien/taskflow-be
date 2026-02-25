@@ -1,5 +1,6 @@
 package com.taskflow.taskflow_be.module.issue.service;
 
+import com.taskflow.taskflow_be.common.util.SecurityUtils;
 import com.taskflow.taskflow_be.exception.ErrorCode;
 import com.taskflow.taskflow_be.exception.NotFoundException;
 import com.taskflow.taskflow_be.module.issue.dto.IssueDtos;
@@ -10,6 +11,7 @@ import com.taskflow.taskflow_be.module.issue.mapper.IssueMapper;
 import com.taskflow.taskflow_be.module.issue.repository.IssueRepository;
 import com.taskflow.taskflow_be.module.issue.repository.IssueSpecs;
 import com.taskflow.taskflow_be.module.project.repository.ProjectRepository;
+import com.taskflow.taskflow_be.module.project.service.ProjectPermissionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -25,10 +27,15 @@ public class IssueServiceImpl implements IssueService {
 
     private final IssueRepository issueRepo;
     private final ProjectRepository projectRepo;
+    private final ProjectPermissionService permission;
 
     @Override
     @Transactional(readOnly = true)
     public List<IssueDtos.IssueResponse> list(UUID projectId, String q, IssueStatus status, IssuePriority priority) {
+        UUID userId = SecurityUtils.currentUserId();
+        permission.requireMember(projectId, userId); // ✅ đặt ở đây
+
+        // tùy bạn: có thể bỏ check projectRepo.findById vì requireMember đã đủ
         projectRepo.findById(projectId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.PROJECT_NOT_FOUND, "Project not found"));
 
@@ -45,6 +52,9 @@ public class IssueServiceImpl implements IssueService {
 
     @Override
     public IssueDtos.IssueResponse create(UUID projectId, IssueDtos.CreateIssueRequest req) {
+        UUID userId = SecurityUtils.currentUserId();
+        permission.requireWrite(projectId, userId); // ✅ đặt ở đây
+
         var project = projectRepo.findById(projectId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.PROJECT_NOT_FOUND, "Project not found"));
 
@@ -55,9 +65,9 @@ public class IssueServiceImpl implements IssueService {
                 .project(project)
                 .title(req.getTitle().trim())
                 .description(req.getDescription())
-                .status(req.getStatus())       // đảm bảo req.getStatus() là IssueStatus
+                .status(statusToUse)          // ✅ dùng statusToUse (đừng dùng req.getStatus())
                 .priority(req.getPriority())
-                .position(nextPos)// đảm bảo req.getPriority() là IssuePriority
+                .position(nextPos)
                 .build();
 
         return IssueMapper.toResponse(issueRepo.save(e));
@@ -65,6 +75,9 @@ public class IssueServiceImpl implements IssueService {
 
     @Override
     public IssueDtos.IssueResponse update(UUID projectId, UUID issueId, IssueDtos.UpdateIssueRequest req) {
+        UUID userId = SecurityUtils.currentUserId();
+        permission.requireWrite(projectId, userId); // ✅ đặt ở đây
+
         var issue = issueRepo.findById(issueId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.ISSUE_NOT_FOUND, "Issue not found"));
 
@@ -75,10 +88,8 @@ public class IssueServiceImpl implements IssueService {
         if (req.getTitle() != null) issue.setTitle(req.getTitle().trim());
         issue.setDescription(req.getDescription());
 
-        // priority update
         if (req.getPriority() != null) issue.setPriority(req.getPriority());
 
-        // status update + position update
         if (req.getStatus() != null && req.getStatus() != issue.getStatus()) {
             IssueStatus nextStatus = req.getStatus();
             int nextPos = issueRepo.maxPosition(projectId, nextStatus) + 1;
@@ -92,6 +103,9 @@ public class IssueServiceImpl implements IssueService {
 
     @Override
     public IssueDtos.IssueResponse move(UUID projectId, UUID issueId, IssueDtos.MoveIssueRequest req) {
+        UUID userId = SecurityUtils.currentUserId();
+        permission.requireWrite(projectId, userId); // ✅ đặt ở đây
+
         var issue = issueRepo.findById(issueId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.ISSUE_NOT_FOUND, "Issue not found"));
 
@@ -100,7 +114,6 @@ public class IssueServiceImpl implements IssueService {
         }
 
         if (req.getStatus() == null) {
-            // nên dùng AppException thay vì IllegalArgumentException để trả JSON chuẩn
             throw new com.taskflow.taskflow_be.exception.AppException(
                     ErrorCode.BAD_REQUEST,
                     org.springframework.http.HttpStatus.BAD_REQUEST,
@@ -111,12 +124,10 @@ public class IssueServiceImpl implements IssueService {
         IssueStatus nextStatus = req.getStatus();
         IssueStatus currentStatus = issue.getStatus();
 
-        // Nếu status không đổi thì thôi (tránh update thừa)
         if (currentStatus == nextStatus) {
             return IssueMapper.toResponse(issue);
         }
 
-        // chuyển cột => position = max(position) của cột mới + 1
         int nextPos = issueRepo.maxPosition(projectId, nextStatus) + 1;
 
         issue.setStatus(nextStatus);

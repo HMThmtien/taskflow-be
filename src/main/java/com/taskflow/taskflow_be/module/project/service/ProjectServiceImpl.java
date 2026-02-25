@@ -4,6 +4,7 @@ import com.taskflow.taskflow_be.common.util.SecurityUtils;
 import com.taskflow.taskflow_be.exception.AppException;
 import com.taskflow.taskflow_be.exception.ErrorCode;
 import com.taskflow.taskflow_be.exception.NotFoundException;
+import com.taskflow.taskflow_be.module.auth.entity.UserEntity;
 import com.taskflow.taskflow_be.module.auth.repository.UserRepository;
 import com.taskflow.taskflow_be.module.project.dto.ProjectDtos;
 import com.taskflow.taskflow_be.module.project.entity.ProjectEntity;
@@ -31,15 +32,23 @@ public class ProjectServiceImpl implements ProjectService {
     @Override
     @Transactional(readOnly = true)
     public List<ProjectDtos.ProjectResponse> list() {
-        return repo.findAll().stream().map(ProjectMapper::toResponse).toList();
+        UUID userId = SecurityUtils.currentUserId();
+
+        return projectMemberRepo.findAllByUserId(userId).stream()
+                .map(ProjectMemberEntity::getProject)
+                .map(ProjectMapper::toResponse)
+                .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public ProjectDtos.ProjectResponse get(UUID id) {
-        var p = repo.findById(id)
-                .orElseThrow(() -> new NotFoundException(ErrorCode.PROJECT_NOT_FOUND));
-        return ProjectMapper.toResponse(p);
+        UUID userId = SecurityUtils.currentUserId();
+
+        var member = projectMemberRepo.findByProjectIdAndUserId(id, userId)
+                .orElseThrow(() -> new AppException(ErrorCode.ACCESS_DENIED,"Access denied"));
+
+        return ProjectMapper.toResponse(member.getProject());
     }
 
     @Override
@@ -47,7 +56,7 @@ public class ProjectServiceImpl implements ProjectService {
 
         UUID userId = SecurityUtils.currentUserId();
 
-        var user = userRepository.findById(userId)
+        UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found"));
 
         ProjectEntity project = ProjectEntity.builder()
@@ -56,15 +65,15 @@ public class ProjectServiceImpl implements ProjectService {
                 .description(req.getDescription())
                 .build();
 
-        repo.save(project);
+        ProjectEntity e = repo.save(project);
 
         projectMemberRepo.save(ProjectMemberEntity.builder()
-                .project(project)
+                .project(e)
                 .user(user)
                 .role(ProjectRole.OWNER)
                 .build());
 
-        return ProjectMapper.toResponse(project);
+        return ProjectMapper.toResponse(e);
     }
 
     @Override
