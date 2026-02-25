@@ -48,12 +48,16 @@ public class IssueServiceImpl implements IssueService {
         var project = projectRepo.findById(projectId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.PROJECT_NOT_FOUND, "Project not found"));
 
+        IssueStatus statusToUse = (req.getStatus() != null) ? req.getStatus() : IssueStatus.TODO;
+        int nextPos = issueRepo.maxPosition(projectId, statusToUse) + 1;
+
         IssueEntity e = IssueEntity.builder()
                 .project(project)
                 .title(req.getTitle().trim())
                 .description(req.getDescription())
                 .status(req.getStatus())       // đảm bảo req.getStatus() là IssueStatus
-                .priority(req.getPriority())   // đảm bảo req.getPriority() là IssuePriority
+                .priority(req.getPriority())
+                .position(nextPos)// đảm bảo req.getPriority() là IssuePriority
                 .build();
 
         return IssueMapper.toResponse(issueRepo.save(e));
@@ -68,10 +72,20 @@ public class IssueServiceImpl implements IssueService {
             throw new NotFoundException(ErrorCode.ISSUE_NOT_FOUND, "Issue not found");
         }
 
-        issue.setTitle(req.getTitle().trim());
+        if (req.getTitle() != null) issue.setTitle(req.getTitle().trim());
         issue.setDescription(req.getDescription());
-        if (req.getStatus() != null) issue.setStatus(req.getStatus());
+
+        // priority update
         if (req.getPriority() != null) issue.setPriority(req.getPriority());
+
+        // status update + position update
+        if (req.getStatus() != null && req.getStatus() != issue.getStatus()) {
+            IssueStatus nextStatus = req.getStatus();
+            int nextPos = issueRepo.maxPosition(projectId, nextStatus) + 1;
+
+            issue.setStatus(nextStatus);
+            issue.setPosition(nextPos);
+        }
 
         return IssueMapper.toResponse(issue);
     }
@@ -94,7 +108,20 @@ public class IssueServiceImpl implements IssueService {
             );
         }
 
-        issue.setStatus(req.getStatus());
+        IssueStatus nextStatus = req.getStatus();
+        IssueStatus currentStatus = issue.getStatus();
+
+        // Nếu status không đổi thì thôi (tránh update thừa)
+        if (currentStatus == nextStatus) {
+            return IssueMapper.toResponse(issue);
+        }
+
+        // chuyển cột => position = max(position) của cột mới + 1
+        int nextPos = issueRepo.maxPosition(projectId, nextStatus) + 1;
+
+        issue.setStatus(nextStatus);
+        issue.setPosition(nextPos);
+
         return IssueMapper.toResponse(issue);
     }
 }

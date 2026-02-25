@@ -29,6 +29,9 @@ public class IssueEntity {
     @Column(name = "title", nullable = false, length = 300)
     private String title;
 
+    @Column(nullable = false)
+    private Integer position;
+
     @Column(name = "description", length = 5000)
     private String description;
 
