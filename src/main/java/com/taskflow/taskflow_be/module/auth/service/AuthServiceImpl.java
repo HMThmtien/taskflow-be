@@ -5,6 +5,7 @@ import com.taskflow.taskflow_be.exception.ErrorCode;
 import com.taskflow.taskflow_be.module.auth.dto.AuthResponse;
 import com.taskflow.taskflow_be.module.auth.dto.LoginRequest;
 import com.taskflow.taskflow_be.module.auth.dto.RegisterRequest;
+import com.taskflow.taskflow_be.module.auth.entity.GlobalRole;
 import com.taskflow.taskflow_be.module.auth.entity.RefreshTokenEntity;
 import com.taskflow.taskflow_be.module.auth.entity.UserEntity;
 import com.taskflow.taskflow_be.module.auth.repository.RefreshTokenRepository;
@@ -54,17 +55,20 @@ public class AuthServiceImpl implements AuthService {
         UserEntity user = new UserEntity();
         user.setUsername(username);
         user.setPasswordHash(encoder.encode(req.password()));
-        user.setRole("USER");
+
+        // ✅ enum role
+        user.setRole(GlobalRole.USER);
+
         repo.save(user);
 
-        String accessToken = jwtService.generateAccessToken(user.getUsername(), user.getRole());
+        String accessToken = jwtService.generateAccessToken(user.getUsername(), user.getRole().name());
         String refreshToken = createAndSaveRefreshToken(user);
 
         return new AuthResponse(
                 accessToken,
                 refreshToken,
                 user.getUsername(),
-                user.getRole()
+                user.getRole().name()
         );
     }
 
@@ -87,14 +91,14 @@ public class AuthServiceImpl implements AuthService {
             );
         }
 
-        String accessToken = jwtService.generateAccessToken(user.getUsername(), user.getRole());
+        String accessToken = jwtService.generateAccessToken(user.getUsername(), user.getRole().name());
         String refreshToken = createAndSaveRefreshToken(user);
 
         return new AuthResponse(
                 accessToken,
                 refreshToken,
                 user.getUsername(),
-                user.getRole()
+                user.getRole().name()
         );
     }
 
@@ -124,13 +128,13 @@ public class AuthServiceImpl implements AuthService {
         // issue new refresh token
         String newRefreshToken = createAndSaveRefreshToken(user);
 
-        String newAccessToken = jwtService.generateAccessToken(user.getUsername(), user.getRole());
+        String newAccessToken = jwtService.generateAccessToken(user.getUsername(), user.getRole().name());
 
         return new AuthResponse(
                 newAccessToken,
                 newRefreshToken,
                 user.getUsername(),
-                user.getRole()
+                user.getRole().name()
         );
     }
 

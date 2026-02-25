@@ -3,6 +3,7 @@ package com.taskflow.taskflow_be.security.jwt;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -14,6 +15,13 @@ public class JwtService {
 
     public JwtService(JwtProperties props) {
         this.props = props;
+    }
+
+    @PostConstruct
+    void validateSecret() {
+        if (props.getSecret() == null || props.getSecret().length() < 32) {
+            throw new IllegalStateException("taskflow.jwt.secret must be at least 32 characters for HS256");
+        }
     }
 
     public String generateAccessToken(String username, String role) {
