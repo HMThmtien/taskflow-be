@@ -1,0 +1,14 @@
+ALTER TABLE users
+    ADD COLUMN email VARCHAR(255),
+ADD COLUMN full_name VARCHAR(120),
+ADD COLUMN avatar_url TEXT,
+ADD COLUMN bio TEXT,
+ADD COLUMN job_title VARCHAR(120),
+ADD COLUMN timezone VARCHAR(80),
+ADD COLUMN locale VARCHAR(20),
+ADD COLUMN updated_at TIMESTAMPTZ DEFAULT now(),
+ADD COLUMN last_login_at TIMESTAMPTZ;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_users_email
+    ON users(email)
+    WHERE email IS NOT NULL;

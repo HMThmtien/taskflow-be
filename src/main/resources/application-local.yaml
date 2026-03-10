@@ -13,7 +13,7 @@ spring:
 
 taskflow:
   jwt:
-    secret: q6y4uf+dzjV8cmwM4eSTmkz2ca7JYswE8RRtW+pJwMY=
+    secret: PWWpaneD7Lr2RFPOBtwYKc1PkxkRKdahAJp99bSvxqY=
     access-token-minutes: 15
     refresh-ttl: 2592000000
 
