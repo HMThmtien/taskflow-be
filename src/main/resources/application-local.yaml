@@ -1,0 +1,23 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/taskflow_v2
+    username: taskflow_v2_user
+    password: taskflow_v2_pass
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+taskflow:
+  jwt:
+    secret: q6y4uf+dzjV8cmwM4eSTmkz2ca7JYswE8RRtW+pJwMY=
+    access-token-minutes: 15
+    refresh-ttl: 2592000000
+
+  cors:
+    allowed-origins:
+      - http://localhost:5173
+      - http://127.0.0.1:5173

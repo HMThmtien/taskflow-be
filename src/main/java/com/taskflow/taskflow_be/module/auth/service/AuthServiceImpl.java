@@ -91,6 +91,8 @@ public class AuthServiceImpl implements AuthService {
             );
         }
 
+        refreshRepo.revokeAllActiveTokensByUserId(user.getId());
+
         String accessToken = jwtService.generateAccessToken(user.getUsername(), user.getRole().name());
         String refreshToken = createAndSaveRefreshToken(user);
 

@@ -41,7 +41,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String token = auth.substring(7);
         if (!jwtService.isValid(token)) {
-            chain.doFilter(req, res);
+            res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            res.setContentType("application/json");
+            res.getWriter().write("""
+            {"code":"UNAUTHORIZED","message":"Access token is invalid or expired"}
+        """);
             return;
         }
 

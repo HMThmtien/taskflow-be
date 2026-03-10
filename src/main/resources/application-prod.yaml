@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+taskflow:
+  jwt:
+    secret: ${JWT_SECRET}
+    access-token-minutes: ${JWT_ACCESS_TOKEN_MINUTES:15}
+    refresh-ttl: ${JWT_REFRESH_TTL:2592000000}
+
+  cors:
+    allowed-origins:
+      - ${FRONTEND_URL}

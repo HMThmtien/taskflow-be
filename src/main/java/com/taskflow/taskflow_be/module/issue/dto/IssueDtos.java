@@ -7,6 +7,8 @@ import jakarta.validation.constraints.Size;
 import lombok.*;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 public class IssueDtos {
@@ -21,11 +23,16 @@ public class IssueDtos {
 
         private IssueStatus status;     // optional
         private IssuePriority priority; // optional
+
+        // ✅ NEW
+        private UUID assigneeId;        // optional
+        private LocalDate dueDate;      // optional
+        private List<String> labels;    // optional
     }
 
     @Getter @Setter
     public static class UpdateIssueRequest {
-        @NotBlank @Size(max = 300)
+        @Size(max = 300)
         private String title;
 
         @Size(max = 5000)
@@ -33,6 +40,11 @@ public class IssueDtos {
 
         private IssueStatus status;
         private IssuePriority priority;
+
+        // ✅ NEW
+        private UUID assigneeId;
+        private LocalDate dueDate;
+        private List<String> labels;
     }
 
     @Getter @Setter
@@ -48,6 +60,16 @@ public class IssueDtos {
         private String description;
         private IssueStatus status;
         private IssuePriority priority;
+
+        // ✅ NEW
+        private Integer position;
+        private UUID reporterId;
+        private String reporterUsername;
+        private UUID assigneeId;
+        private String assigneeUsername;
+        private LocalDate dueDate;
+        private List<String> labels;
+
         private Instant createdAt;
         private Instant updatedAt;
     }
