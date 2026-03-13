@@ -1,5 +1,6 @@
 package com.taskflow.taskflow_be.module.project.entity;
 
+import com.taskflow.taskflow_be.common.constant.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -11,7 +12,7 @@ import java.util.UUID;
 @Builder
 @Entity
 @Table(name = "projects")
-public class ProjectEntity {
+public class ProjectEntity extends BaseEntity {
 
     @Id
     @Column(name = "id", nullable = false)

@@ -1,5 +1,6 @@
 package com.taskflow.taskflow_be.module.auth.entity;
 
+import com.taskflow.taskflow_be.common.constant.BaseEntity;
 import com.taskflow.taskflow_be.module.auth.entity.UserEntity; // nếu UserEntity nằm module khác thì sửa import
 import jakarta.persistence.*;
 import lombok.*;
@@ -14,7 +15,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class RefreshTokenEntity {
+public class RefreshTokenEntity extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

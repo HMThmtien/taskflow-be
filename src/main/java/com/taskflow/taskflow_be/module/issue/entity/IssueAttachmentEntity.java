@@ -1,5 +1,6 @@
 package com.taskflow.taskflow_be.module.issue.entity;
 
+import com.taskflow.taskflow_be.common.constant.BaseEntity;
 import com.taskflow.taskflow_be.module.auth.entity.UserEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -16,7 +17,7 @@ import java.util.UUID;
 @Table(name = "issue_attachments", indexes = {
         @Index(name = "idx_issue_attachments_issue", columnList = "issue_id,created_at")
 })
-public class IssueAttachmentEntity {
+public class IssueAttachmentEntity extends BaseEntity {
 
     @Id
     @Column(name = "id", nullable = false)

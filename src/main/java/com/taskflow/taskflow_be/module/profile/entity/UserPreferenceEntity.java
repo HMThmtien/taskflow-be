@@ -1,5 +1,6 @@
 package com.taskflow.taskflow_be.module.profile.entity;
 
+import com.taskflow.taskflow_be.common.constant.BaseEntity;
 import com.taskflow.taskflow_be.module.auth.entity.UserEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -14,7 +15,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserPreferenceEntity {
+public class UserPreferenceEntity extends BaseEntity {
 
     @Id
     @Column(name = "user_id", nullable = false)

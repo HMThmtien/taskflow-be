@@ -1,5 +1,6 @@
 package com.taskflow.taskflow_be.module.issue.entity;
 
+import com.taskflow.taskflow_be.common.constant.BaseEntity;
 import com.taskflow.taskflow_be.module.auth.entity.UserEntity;
 import com.taskflow.taskflow_be.module.project.entity.ProjectEntity;
 import jakarta.persistence.*;
@@ -24,7 +25,7 @@ import java.util.UUID;
                 @Index(name = "idx_issues_project_assignee", columnList = "project_id,assignee_id"),
                 @Index(name = "idx_issues_project_due", columnList = "project_id,due_date")
         })
-public class IssueEntity {
+public class IssueEntity extends BaseEntity {
 
     @Id
     @Column(name = "id", nullable = false)

@@ -1,5 +1,6 @@
 package com.taskflow.taskflow_be.module.notification.entity;
 
+import com.taskflow.taskflow_be.common.constant.BaseEntity;
 import com.taskflow.taskflow_be.module.auth.entity.UserEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -17,7 +18,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class NotificationEntity {
+public class NotificationEntity extends BaseEntity {
 
     @Id
     @Column(name = "id", nullable = false)
