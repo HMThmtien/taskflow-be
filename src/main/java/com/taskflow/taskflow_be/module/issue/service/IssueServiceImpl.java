@@ -45,6 +45,7 @@ public class IssueServiceImpl implements IssueService {
             IssueStatus status,
             IssuePriority priority,
             UUID assigneeId,
+            UUID sprintId,
             LocalDate dueFrom,
             LocalDate dueTo,
             String label,
@@ -62,6 +63,7 @@ public class IssueServiceImpl implements IssueService {
         if (status != null) spec = spec.and(IssueSpecs.status(status));
         if (priority != null) spec = spec.and(IssueSpecs.priority(priority));
         if (assigneeId != null) spec = spec.and(IssueSpecs.assigneeId(assigneeId));
+        if (sprintId != null) spec = spec.and(IssueSpecs.sprintId(sprintId));
         if (dueFrom != null) spec = spec.and(IssueSpecs.dueFrom(dueFrom));
         if (dueTo != null) spec = spec.and(IssueSpecs.dueTo(dueTo));
         if (label != null && !label.isBlank()) spec = spec.and(IssueSpecs.hasLabel(label.trim()));

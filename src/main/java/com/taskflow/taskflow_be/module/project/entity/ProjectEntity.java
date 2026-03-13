@@ -27,6 +27,12 @@ public class ProjectEntity extends BaseEntity {
     @Column(name = "description", length = 2000)
     private String description;
 
+    @Column(name = "archived", nullable = false)
+    private boolean archived;
+
+    @Column(name = "archived_at")
+    private Instant archivedAt;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 

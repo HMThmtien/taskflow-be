@@ -3,6 +3,7 @@ package com.taskflow.taskflow_be.module.issue.entity;
 import com.taskflow.taskflow_be.common.constant.BaseEntity;
 import com.taskflow.taskflow_be.module.auth.entity.UserEntity;
 import com.taskflow.taskflow_be.module.project.entity.ProjectEntity;
+import com.taskflow.taskflow_be.module.sprint.entity.SprintEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -68,6 +69,10 @@ public class IssueEntity extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assignee_id")
     private UserEntity assignee;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sprint_id")
+    private SprintEntity sprint;
 
     @Column(name = "due_date")
     private LocalDate dueDate;

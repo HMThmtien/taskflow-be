@@ -35,4 +35,19 @@ public class ProjectController {
     public ProjectDtos.ProjectResponse update(@PathVariable UUID id, @Valid @RequestBody ProjectDtos.UpdateProjectRequest req) {
         return service.update(id, req);
     }
+
+    @PatchMapping("/{id}/archive")
+    public ProjectDtos.ProjectResponse archive(@PathVariable UUID id) {
+        return service.archive(id);
+    }
+
+    @PatchMapping("/{id}/unarchive")
+    public ProjectDtos.ProjectResponse unarchive(@PathVariable UUID id) {
+        return service.unarchive(id);
+    }
+
+    @DeleteMapping("/{id}")
+    public void delete(@PathVariable UUID id) {
+        service.delete(id);
+    }
 }

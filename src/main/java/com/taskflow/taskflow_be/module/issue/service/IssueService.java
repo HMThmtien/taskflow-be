@@ -17,6 +17,7 @@ public interface IssueService {
             IssueStatus status,
             IssuePriority priority,
             UUID assigneeId,
+            UUID sprintId,
             LocalDate dueFrom,
             LocalDate dueTo,
             String label,

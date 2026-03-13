@@ -9,4 +9,6 @@ public interface ProjectPermissionService {
     void requireWrite(UUID projectId, UUID userId);
 
     void requireAdmin(UUID projectId, UUID userId);
+
+    void requireOwner(UUID projectId, UUID userId);
 }

@@ -30,6 +30,10 @@ public class IssueSpecs {
         return (root, q, cb) -> cb.equal(root.get("assignee").get("id"), assigneeId);
     }
 
+    public static Specification<IssueEntity> sprintId(UUID sprintId) {
+        return (root, q, cb) -> cb.equal(root.get("sprint").get("id"), sprintId);
+    }
+
     public static Specification<IssueEntity> dueFrom(LocalDate from) {
         return (root, q, cb) -> cb.greaterThanOrEqualTo(root.get("dueDate"), from);
     }

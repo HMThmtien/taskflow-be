@@ -23,6 +23,9 @@ public class ProjectDtos {
 
     @Getter @Setter
     public static class UpdateProjectRequest {
+        @NotBlank @Size(max = 20)
+        private String key;
+
         @NotBlank @Size(max = 200)
         private String name;
 
@@ -36,6 +39,8 @@ public class ProjectDtos {
         private String key;
         private String name;
         private String description;
+        private boolean archived;
+        private Instant archivedAt;
         private Instant createdAt;
     }
 }

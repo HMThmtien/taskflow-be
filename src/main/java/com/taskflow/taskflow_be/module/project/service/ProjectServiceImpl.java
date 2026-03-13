@@ -14,9 +14,11 @@ import com.taskflow.taskflow_be.module.project.mapper.ProjectMapper;
 import com.taskflow.taskflow_be.module.project.repository.ProjectMemberRepository;
 import com.taskflow.taskflow_be.module.project.repository.ProjectRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,6 +30,7 @@ public class ProjectServiceImpl implements ProjectService {
     private final ProjectRepository repo;
     private final ProjectMemberRepository projectMemberRepo;
     private final UserRepository userRepository;
+    private final ProjectPermissionService permission;
 
     @Override
     @Transactional(readOnly = true)
@@ -59,10 +62,15 @@ public class ProjectServiceImpl implements ProjectService {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found"));
 
+        String normalizedKey = normalizeKey(req.getKey());
+        if (repo.existsByKey(normalizedKey)) {
+            throw new AppException(ErrorCode.BAD_REQUEST, HttpStatus.CONFLICT, "Project key already exists");
+        }
+
         ProjectEntity project = ProjectEntity.builder()
-                .key(req.getKey().trim())
+                .key(normalizedKey)
                 .name(req.getName().trim())
-                .description(req.getDescription())
+                .description(normalizeDescription(req.getDescription()))
                 .build();
 
         ProjectEntity e = repo.save(project);
@@ -78,12 +86,78 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     public ProjectDtos.ProjectResponse update(UUID id, ProjectDtos.UpdateProjectRequest req) {
+        UUID currentUserId = SecurityUtils.currentUserId();
+        permission.requireAdmin(id, currentUserId);
+
         var p = repo.findById(id)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.PROJECT_NOT_FOUND));
 
-        p.setName(req.getName().trim());
-        p.setDescription(req.getDescription());
+        String normalizedKey = normalizeKey(req.getKey());
+        if (repo.existsByKeyAndIdNot(normalizedKey, id)) {
+            throw new AppException(ErrorCode.BAD_REQUEST, HttpStatus.CONFLICT, "Project key already exists");
+        }
 
-        return ProjectMapper.toResponse(p);
+        p.setKey(normalizedKey);
+        p.setName(req.getName().trim());
+        p.setDescription(normalizeDescription(req.getDescription()));
+
+        return ProjectMapper.toResponse(repo.save(p));
+    }
+
+    @Override
+    public ProjectDtos.ProjectResponse archive(UUID id) {
+        UUID currentUserId = SecurityUtils.currentUserId();
+        permission.requireAdmin(id, currentUserId);
+
+        var project = repo.findById(id)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.PROJECT_NOT_FOUND));
+
+        if (!project.isArchived()) {
+            project.setArchived(true);
+            project.setArchivedAt(Instant.now());
+        }
+
+        return ProjectMapper.toResponse(repo.save(project));
+    }
+
+    @Override
+    public ProjectDtos.ProjectResponse unarchive(UUID id) {
+        UUID currentUserId = SecurityUtils.currentUserId();
+        permission.requireAdmin(id, currentUserId);
+
+        var project = repo.findById(id)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.PROJECT_NOT_FOUND));
+
+        if (project.isArchived()) {
+            project.setArchived(false);
+            project.setArchivedAt(null);
+        }
+
+        return ProjectMapper.toResponse(repo.save(project));
+    }
+
+    @Override
+    public void delete(UUID id) {
+        UUID currentUserId = SecurityUtils.currentUserId();
+        permission.requireOwner(id, currentUserId);
+
+        var project = repo.findById(id)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.PROJECT_NOT_FOUND));
+
+        repo.delete(project);
+    }
+
+    private String normalizeKey(String raw) {
+        String value = raw == null ? "" : raw.trim().toUpperCase();
+        if (value.isBlank()) {
+            throw new AppException(ErrorCode.BAD_REQUEST, HttpStatus.BAD_REQUEST, "Project key is required");
+        }
+        return value;
+    }
+
+    private String normalizeDescription(String raw) {
+        if (raw == null) return null;
+        String value = raw.trim();
+        return value.isBlank() ? null : value;
     }
 }

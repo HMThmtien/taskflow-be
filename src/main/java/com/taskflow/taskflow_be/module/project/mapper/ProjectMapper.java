@@ -10,6 +10,8 @@ public class ProjectMapper {
                 .key(e.getKey())
                 .name(e.getName())
                 .description(e.getDescription())
+                .archived(e.isArchived())
+                .archivedAt(e.getArchivedAt())
                 .createdAt(e.getCreatedAt())
                 .build();
     }

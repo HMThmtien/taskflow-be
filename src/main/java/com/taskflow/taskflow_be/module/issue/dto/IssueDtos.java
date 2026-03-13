@@ -3,6 +3,7 @@ package com.taskflow.taskflow_be.module.issue.dto;
 import com.taskflow.taskflow_be.module.issue.entity.IssuePriority;
 import com.taskflow.taskflow_be.module.issue.entity.IssueStatus;
 import com.taskflow.taskflow_be.module.issue.entity.IssueType;
+import com.taskflow.taskflow_be.module.sprint.entity.SprintStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.*;
@@ -75,6 +76,9 @@ public class IssueDtos {
         private String reporterUsername;
         private UUID assigneeId;
         private String assigneeUsername;
+        private UUID sprintId;
+        private String sprintName;
+        private SprintStatus sprintStatus;
         private LocalDate dueDate;
         private List<String> labels;
 

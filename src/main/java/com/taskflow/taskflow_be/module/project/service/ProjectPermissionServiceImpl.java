@@ -44,4 +44,14 @@ public class ProjectPermissionServiceImpl implements ProjectPermissionService {
             throw new AppException(ErrorCode.ACCESS_DENIED, "Access denied");
         }
     }
+
+    @Override
+    public void requireOwner(UUID projectId, UUID userId) {
+        var member = repo.findByProjectIdAndUserId(projectId, userId)
+                .orElseThrow(() -> new AppException(ErrorCode.ACCESS_DENIED, "Access denied"));
+
+        if (member.getRole() != ProjectRole.OWNER) {
+            throw new AppException(ErrorCode.ACCESS_DENIED, "Access denied");
+        }
+    }
 }

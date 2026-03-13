@@ -10,4 +10,7 @@ public interface ProjectService {
     ProjectDtos.ProjectResponse get(UUID id);
     ProjectDtos.ProjectResponse create(ProjectDtos.CreateProjectRequest req);
     ProjectDtos.ProjectResponse update(UUID id, ProjectDtos.UpdateProjectRequest req);
+    ProjectDtos.ProjectResponse archive(UUID id);
+    ProjectDtos.ProjectResponse unarchive(UUID id);
+    void delete(UUID id);
 }
