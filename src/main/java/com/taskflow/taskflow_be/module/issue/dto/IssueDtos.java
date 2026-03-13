@@ -2,6 +2,7 @@ package com.taskflow.taskflow_be.module.issue.dto;
 
 import com.taskflow.taskflow_be.module.issue.entity.IssuePriority;
 import com.taskflow.taskflow_be.module.issue.entity.IssueStatus;
+import com.taskflow.taskflow_be.module.issue.entity.IssueType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.*;
@@ -28,6 +29,8 @@ public class IssueDtos {
         private UUID assigneeId;        // optional
         private LocalDate dueDate;      // optional
         private List<String> labels;    // optional
+        private IssueType type;
+        private UUID parentIssueId;
     }
 
     @Getter @Setter
@@ -45,6 +48,8 @@ public class IssueDtos {
         private UUID assigneeId;
         private LocalDate dueDate;
         private List<String> labels;
+        private IssueType type;
+        private UUID parentIssueId;
     }
 
     @Getter @Setter
@@ -60,6 +65,9 @@ public class IssueDtos {
         private String description;
         private IssueStatus status;
         private IssuePriority priority;
+        private IssueType type;
+        private UUID parentIssueId;
+        private String parentIssueTitle;
 
         // ✅ NEW
         private Integer position;

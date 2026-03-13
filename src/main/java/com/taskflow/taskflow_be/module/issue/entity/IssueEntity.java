@@ -37,6 +37,14 @@ public class IssueEntity {
     @Column(name = "title", nullable = false, length = 300)
     private String title;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type", nullable = false, length = 20)
+    private IssueType type;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_issue_id")
+    private IssueEntity parentIssue;
+
     @Column(nullable = false)
     private Integer position;
 

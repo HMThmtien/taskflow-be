@@ -22,6 +22,9 @@ public class IssueMapper {
                 .status(e.getStatus())
                 .priority(e.getPriority())
                 .position(e.getPosition())
+                .type(e.getType())
+                .parentIssueId(e.getParentIssue() != null ? e.getParentIssue().getId() : null)
+                .parentIssueTitle(e.getParentIssue() != null ? e.getParentIssue().getTitle() : null)
 
                 // ✅ NEW: reporter
                 .reporterId(e.getReporter() != null ? e.getReporter().getId() : null)

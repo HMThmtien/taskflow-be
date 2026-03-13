@@ -1,5 +1,6 @@
 package com.taskflow.taskflow_be.security.config;
 
+import com.taskflow.taskflow_be.config.StorageProperties;
 import com.taskflow.taskflow_be.module.auth.repository.UserRepository;
 import com.taskflow.taskflow_be.security.jwt.JwtAuthFilter;
 import com.taskflow.taskflow_be.security.jwt.JwtProperties;
@@ -29,7 +30,7 @@ import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 @Configuration
 @EnableMethodSecurity
-@EnableConfigurationProperties(JwtProperties.class)
+@EnableConfigurationProperties({JwtProperties.class, StorageProperties.class})
 public class SecurityConfig {
 
     @Bean

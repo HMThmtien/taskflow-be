@@ -8,6 +8,7 @@ import com.taskflow.taskflow_be.module.issue.dto.IssueDtos;
 import com.taskflow.taskflow_be.module.issue.entity.IssueEntity;
 import com.taskflow.taskflow_be.module.issue.entity.IssuePriority;
 import com.taskflow.taskflow_be.module.issue.entity.IssueStatus;
+import com.taskflow.taskflow_be.module.issue.entity.IssueType;
 import com.taskflow.taskflow_be.module.issue.mapper.IssueMapper;
 import com.taskflow.taskflow_be.module.issue.repository.IssueRepository;
 import com.taskflow.taskflow_be.module.issue.repository.IssueSpecs;
@@ -281,6 +282,86 @@ public class IssueServiceImpl implements IssueService {
                 java.util.Map.of("from", oldStatus.name(), "to", nextStatus.name()));
 
         return IssueMapper.toResponse(issue);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<IssueDtos.IssueResponse> listSubtasks(UUID projectId, UUID issueId) {
+
+        UUID userId = SecurityUtils.currentUserId();
+        permission.requireMember(projectId, userId);
+
+        var parent = issueRepo.findById(issueId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.ISSUE_NOT_FOUND, "Issue not found"));
+
+        if (!parent.getProject().getId().equals(projectId)) {
+            throw new NotFoundException(ErrorCode.ISSUE_NOT_FOUND, "Issue not found");
+        }
+
+        return issueRepo.findByParentIssue_Id(issueId)
+                .stream()
+                .map(IssueMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    public IssueDtos.IssueResponse createSubtask(UUID projectId, UUID parentIssueId, IssueDtos.CreateIssueRequest req) {
+
+        UUID userId = SecurityUtils.currentUserId();
+        permission.requireWrite(projectId, userId);
+
+        var project = projectRepo.findById(projectId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.PROJECT_NOT_FOUND, "Project not found"));
+
+        var parent = issueRepo.findById(parentIssueId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.ISSUE_NOT_FOUND, "Parent issue not found"));
+
+        if (!parent.getProject().getId().equals(projectId)) {
+            throw new NotFoundException(ErrorCode.ISSUE_NOT_FOUND, "Parent issue not in project");
+        }
+
+        var reporter = userRepo.findById(userId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.USER_NOT_FOUND, "User not found"));
+
+        String title = req.getTitle() == null ? null : req.getTitle().trim();
+        if (title == null || title.isBlank()) {
+            throw new com.taskflow.taskflow_be.exception.AppException(
+                    ErrorCode.BAD_REQUEST,
+                    org.springframework.http.HttpStatus.BAD_REQUEST,
+                    "title must not be blank"
+            );
+        }
+
+        int nextPos = issueRepo.maxPosition(projectId, IssueStatus.TODO) + 1;
+
+        IssueEntity e = IssueEntity.builder()
+                .project(project)
+                .title(title)
+                .description(req.getDescription())
+                .status(IssueStatus.TODO)
+                .priority(req.getPriority() != null ? req.getPriority() : IssuePriority.MEDIUM)
+                .type(req.getType() != null ? req.getType() : IssueType.TASK)
+                .parentIssue(parent)
+                .position(nextPos)
+                .reporter(reporter)
+                .assignee(resolveAssignee(projectId, req.getAssigneeId()))
+                .dueDate(req.getDueDate())
+                .labels(normalizeLabels(req.getLabels()))
+                .build();
+
+        IssueEntity saved = issueRepo.save(e);
+
+        activityLogService.log(
+                userId,
+                saved,
+                com.taskflow.taskflow_be.module.issue.entity.IssueActivityType.ISSUE_CREATED,
+                java.util.Map.of(
+                        "title", saved.getTitle(),
+                        "type", "SUBTASK"
+                )
+        );
+
+        return IssueMapper.toResponse(saved);
     }
 
 

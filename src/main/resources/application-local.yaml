@@ -12,6 +12,9 @@ spring:
         format_sql: true
 
 taskflow:
+  storage:
+    upload-dir: uploads
+
   jwt:
     secret: PWWpaneD7Lr2RFPOBtwYKc1PkxkRKdahAJp99bSvxqY=
     access-token-minutes: 15

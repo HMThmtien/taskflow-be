@@ -72,4 +72,21 @@ public class IssueController {
     ) {
         return service.move(projectId, issueId, req);
     }
+
+    @GetMapping("/{issueId}/subtasks")
+    public List<IssueDtos.IssueResponse> listSubtasks(
+            @PathVariable UUID projectId,
+            @PathVariable UUID issueId
+    ) {
+        return service.listSubtasks(projectId, issueId);
+    }
+
+    @PostMapping("/{issueId}/subtasks")
+    public IssueDtos.IssueResponse createSubtask(
+            @PathVariable UUID projectId,
+            @PathVariable UUID issueId,
+            @RequestBody IssueDtos.CreateIssueRequest req
+    ) {
+        return service.createSubtask(projectId, issueId, req);
+    }
 }

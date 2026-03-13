@@ -25,4 +25,8 @@ public interface IssueService {
     IssueDtos.IssueResponse create(UUID projectId, IssueDtos.CreateIssueRequest req);
     IssueDtos.IssueResponse update(UUID projectId, UUID issueId, IssueDtos.UpdateIssueRequest req);
     IssueDtos.IssueResponse move(UUID projectId, UUID issueId, IssueDtos.MoveIssueRequest req);
+
+    List<IssueDtos.IssueResponse> listSubtasks(UUID projectId, UUID issueId);
+
+    IssueDtos.IssueResponse createSubtask(UUID projectId, UUID parentIssueId, IssueDtos.CreateIssueRequest req);
 }
