@@ -14,8 +14,11 @@ import com.taskflow.taskflow_be.module.issue.repository.IssueCommentRepository;
 import com.taskflow.taskflow_be.module.issue.repository.IssueRepository;
 import com.taskflow.taskflow_be.module.notification.entity.NotificationEntity;
 import com.taskflow.taskflow_be.module.notification.repository.NotificationRepository;
+import com.taskflow.taskflow_be.module.notification.service.NotificationRealtimeService;
 import com.taskflow.taskflow_be.module.project.repository.ProjectMemberRepository;
 import com.taskflow.taskflow_be.module.project.service.ProjectPermissionService;
+import com.taskflow.taskflow_be.module.realtime.dto.RealtimeDtos;
+import com.taskflow.taskflow_be.module.realtime.service.RealtimeEventService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -41,6 +44,8 @@ public class IssueCommentServiceImpl implements IssueCommentService {
     private final NotificationRepository notificationRepo;
     private final ProjectPermissionService permission;
     private final IssueActivityService activityService;
+    private final NotificationRealtimeService notificationRealtimeService;
+    private final RealtimeEventService realtimeEventService;
 
     @Override
     @Transactional(readOnly = true)
@@ -93,7 +98,7 @@ public class IssueCommentServiceImpl implements IssueCommentService {
                 );
             }
 
-            notificationRepo.save(
+            var notification = notificationRepo.save(
                     NotificationEntity.builder()
                             .user(mentionedUser)
                             .actor(author)
@@ -106,6 +111,7 @@ public class IssueCommentServiceImpl implements IssueCommentService {
                             .isRead(false)
                             .build()
             );
+            notificationRealtimeService.publishCreated(notification);
         }
 
         activityService.log(
@@ -115,7 +121,22 @@ public class IssueCommentServiceImpl implements IssueCommentService {
                 Map.of("commentId", saved.getId().toString())
         );
 
-        return toResponse(saved, mentionedUsers);
+        var response = toResponse(saved, mentionedUsers);
+
+        var memberIds = projectMemberRepo.findAllByProjectId(issue.getProject().getId()).stream()
+                .map(member -> member.getUser().getId())
+                .toList();
+
+        realtimeEventService.publishToUsers(
+                memberIds,
+                "issue.comment.created",
+                RealtimeDtos.IssueCommentEventPayload.builder()
+                        .issueId(issue.getId())
+                        .comment(response)
+                        .build()
+        );
+
+        return response;
     }
 
     private List<UserEntity> resolveMentionedUsers(String content, UUID projectId, UUID authorId) {

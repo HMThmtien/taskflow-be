@@ -3,6 +3,7 @@ package com.taskflow.taskflow_be.module.notification.service;
 import com.taskflow.taskflow_be.module.auth.repository.UserRepository;
 import com.taskflow.taskflow_be.module.notification.dto.NotificationDtos;
 import com.taskflow.taskflow_be.module.notification.entity.NotificationEntity;
+import com.taskflow.taskflow_be.module.notification.mapper.NotificationMapper;
 import com.taskflow.taskflow_be.module.notification.repository.NotificationRepository;
 import com.taskflow.taskflow_be.common.util.SecurityUtils;
 import jakarta.transaction.Transactional;
@@ -47,7 +48,7 @@ public class NotificationServiceImpl implements NotificationService {
         var result = notificationRepository.findMyNotifications(currentUserId, unreadOnly, pageable);
 
         var response = new NotificationDtos.NotificationPageResponse();
-        response.setItems(result.getContent().stream().map(this::toResponse).toList());
+        response.setItems(result.getContent().stream().map(NotificationMapper::toResponse).toList());
         response.setPage(safePage);
         response.setPageSize(safePageSize);
         response.setTotal(result.getTotalElements());
@@ -95,33 +96,5 @@ public class NotificationServiceImpl implements NotificationService {
         notificationRepository.saveAll(all);
 
         return Map.of("message", "Marked all as read");
-    }
-
-    private NotificationDtos.NotificationResponse toResponse(NotificationEntity entity) {
-        var dto = new NotificationDtos.NotificationResponse();
-        dto.setId(entity.getId());
-        dto.setType(entity.getType());
-        dto.setTitle(entity.getTitle());
-        dto.setBody(entity.getBody());
-        dto.setRead(entity.isRead());
-        dto.setCreatedAt(entity.getCreatedAt());
-
-        if (entity.getActor() != null) {
-            var actor = new NotificationDtos.ActorResponse();
-            actor.setId(entity.getActor().getId());
-            actor.setUsername(entity.getActor().getUsername());
-            actor.setFullName(entity.getActor().getFullName());
-            dto.setActor(actor);
-        }
-
-        if (entity.getEntityType() != null || entity.getEntityId() != null || entity.getRoute() != null) {
-            var target = new NotificationDtos.TargetResponse();
-            target.setEntityType(entity.getEntityType());
-            target.setEntityId(entity.getEntityId());
-            target.setRoute(entity.getRoute());
-            dto.setTarget(target);
-        }
-
-        return dto;
     }
 }
