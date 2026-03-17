@@ -1,6 +1,7 @@
 package com.taskflow.taskflow_be.security.config;
 
 import com.taskflow.taskflow_be.config.StorageProperties;
+import com.taskflow.taskflow_be.config.web.RequestCorrelationFilter;
 import com.taskflow.taskflow_be.module.auth.repository.UserRepository;
 import com.taskflow.taskflow_be.security.jwt.JwtAuthFilter;
 import com.taskflow.taskflow_be.security.jwt.JwtProperties;
@@ -20,10 +21,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
-import org.springframework.security.web.access.AccessDeniedHandlerImpl;
 
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
@@ -59,7 +58,11 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
+    public SecurityFilterChain filterChain(
+            HttpSecurity http,
+            JwtAuthFilter jwtAuthFilter,
+            RequestCorrelationFilter requestCorrelationFilter
+    ) throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
@@ -71,12 +74,20 @@ public class SecurityConfig {
                                 .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER))
                 )
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint(new HttpStatusEntryPoint(UNAUTHORIZED))
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(UNAUTHORIZED.value());
+                            response.setContentType("application/json");
+                            response.setHeader(RequestCorrelationFilter.REQUEST_ID_HEADER, String.valueOf(request.getAttribute(RequestCorrelationFilter.REQUEST_ID_ATTR)));
+                            response.getWriter().write("""
+                                {"success":false,"error":{"code":"UNAUTHORIZED","message":"Authentication required","details":null}}
+                            """);
+                        })
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
                             response.setStatus(FORBIDDEN.value());
                             response.setContentType("application/json");
+                            response.setHeader(RequestCorrelationFilter.REQUEST_ID_HEADER, String.valueOf(request.getAttribute(RequestCorrelationFilter.REQUEST_ID_ATTR)));
                             response.getWriter().write("""
-                                {"code":"FORBIDDEN","message":"Access denied"}
+                                {"success":false,"error":{"code":"FORBIDDEN","message":"Access denied","details":null}}
                             """);
                         })
                 )
@@ -91,6 +102,7 @@ public class SecurityConfig {
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
+                .addFilterBefore(requestCorrelationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(authRateLimitFilter(), UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();

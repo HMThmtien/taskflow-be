@@ -7,6 +7,7 @@ public class ApiResponse<T> {
     private T data;
     private ApiError error;
     private Instant timestamp = Instant.now();
+    private String requestId;
 
     public static <T> ApiResponse<T> ok(T data) {
         ApiResponse<T> r = new ApiResponse<>();
@@ -16,9 +17,14 @@ public class ApiResponse<T> {
     }
 
     public static <T> ApiResponse<T> fail(String code, String message) {
+        return fail(code, message, null, null);
+    }
+
+    public static <T> ApiResponse<T> fail(String code, String message, Object details, String requestId) {
         ApiResponse<T> r = new ApiResponse<>();
         r.success = false;
-        r.error = new ApiError(code, message);
+        r.error = new ApiError(code, message, details);
+        r.requestId = requestId;
         return r;
     }
 
@@ -26,6 +32,7 @@ public class ApiResponse<T> {
     public T getData() { return data; }
     public ApiError getError() { return error; }
     public Instant getTimestamp() { return timestamp; }
+    public String getRequestId() { return requestId; }
 
-    public record ApiError(String code, String message) {}
+    public record ApiError(String code, String message, Object details) {}
 }

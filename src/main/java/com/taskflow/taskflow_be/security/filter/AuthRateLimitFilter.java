@@ -1,5 +1,6 @@
 package com.taskflow.taskflow_be.security.filter;
 
+import com.taskflow.taskflow_be.config.web.RequestCorrelationFilter;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.Refill;
@@ -38,8 +39,9 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
         if (!bucket.tryConsume(1)) {
             response.setStatus(429);
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.setHeader(RequestCorrelationFilter.REQUEST_ID_HEADER, String.valueOf(request.getAttribute(RequestCorrelationFilter.REQUEST_ID_ATTR)));
             response.getWriter().write("""
-                {"code":"TOO_MANY_REQUESTS","message":"Too many auth requests, please try again later"}
+                {"success":false,"error":{"code":"TOO_MANY_REQUESTS","message":"Too many auth requests, please try again later","details":null}}
                 """);
             return;
         }

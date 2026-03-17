@@ -1,5 +1,6 @@
 package com.taskflow.taskflow_be.module.project.service;
 
+import com.taskflow.taskflow_be.common.audit.AuditLogService;
 import com.taskflow.taskflow_be.common.util.SecurityUtils;
 import com.taskflow.taskflow_be.exception.AppException;
 import com.taskflow.taskflow_be.exception.ErrorCode;
@@ -28,6 +29,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
     private final ProjectMemberRepository memberRepo;
     private final UserRepository userRepo;
     private final ProjectPermissionService permission;
+    private final AuditLogService auditLogService;
 
     @Override
     public ProjectMemberDtos.MemberResponse addMember(UUID projectId, ProjectMemberDtos.AddMemberRequest req) {
@@ -54,6 +56,13 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
 
         member.setRole(req.getRole());
         memberRepo.save(member);
+        auditLogService.log(
+                existing.isPresent() ? "PROJECT_MEMBER_ROLE_UPDATED" : "PROJECT_MEMBER_ADDED",
+                currentUserId,
+                "PROJECT",
+                projectId,
+                java.util.Map.of("targetUserId", user.getId(), "role", member.getRole().name())
+        );
 
         return ProjectMemberDtos.MemberResponse.builder()
                 .userId(user.getId())
@@ -77,6 +86,13 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
 
         member.setRole(req.getRole());
         memberRepo.save(member);
+        auditLogService.log(
+                "PROJECT_MEMBER_ROLE_UPDATED",
+                currentUserId,
+                "PROJECT",
+                projectId,
+                java.util.Map.of("targetUserId", userId, "role", member.getRole().name())
+        );
 
         return ProjectMemberDtos.MemberResponse.builder()
                 .userId(member.getUser().getId())
@@ -99,6 +115,13 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
         }
 
         memberRepo.delete(member);
+        auditLogService.log(
+                "PROJECT_MEMBER_REMOVED",
+                currentUserId,
+                "PROJECT",
+                projectId,
+                java.util.Map.of("targetUserId", userId, "role", member.getRole().name())
+        );
     }
 
     @Override

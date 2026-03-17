@@ -1,5 +1,6 @@
 package com.taskflow.taskflow_be.module.project.service;
 
+import com.taskflow.taskflow_be.common.audit.AuditLogService;
 import com.taskflow.taskflow_be.common.util.SecurityUtils;
 import com.taskflow.taskflow_be.exception.AppException;
 import com.taskflow.taskflow_be.exception.ErrorCode;
@@ -31,6 +32,7 @@ public class ProjectServiceImpl implements ProjectService {
     private final ProjectMemberRepository projectMemberRepo;
     private final UserRepository userRepository;
     private final ProjectPermissionService permission;
+    private final AuditLogService auditLogService;
 
     @Override
     @Transactional(readOnly = true)
@@ -81,6 +83,14 @@ public class ProjectServiceImpl implements ProjectService {
                 .role(ProjectRole.OWNER)
                 .build());
 
+        auditLogService.log(
+                "PROJECT_CREATED",
+                userId,
+                "PROJECT",
+                e.getId(),
+                java.util.Map.of("key", e.getKey(), "name", e.getName())
+        );
+
         return ProjectMapper.toResponse(e);
     }
 
@@ -101,7 +111,15 @@ public class ProjectServiceImpl implements ProjectService {
         p.setName(req.getName().trim());
         p.setDescription(normalizeDescription(req.getDescription()));
 
-        return ProjectMapper.toResponse(repo.save(p));
+        var saved = repo.save(p);
+        auditLogService.log(
+                "PROJECT_UPDATED",
+                currentUserId,
+                "PROJECT",
+                id,
+                java.util.Map.of("key", saved.getKey(), "name", saved.getName())
+        );
+        return ProjectMapper.toResponse(saved);
     }
 
     @Override
@@ -117,7 +135,9 @@ public class ProjectServiceImpl implements ProjectService {
             project.setArchivedAt(Instant.now());
         }
 
-        return ProjectMapper.toResponse(repo.save(project));
+        var saved = repo.save(project);
+        auditLogService.log("PROJECT_ARCHIVED", currentUserId, "PROJECT", id, java.util.Map.of());
+        return ProjectMapper.toResponse(saved);
     }
 
     @Override
@@ -133,7 +153,9 @@ public class ProjectServiceImpl implements ProjectService {
             project.setArchivedAt(null);
         }
 
-        return ProjectMapper.toResponse(repo.save(project));
+        var saved = repo.save(project);
+        auditLogService.log("PROJECT_UNARCHIVED", currentUserId, "PROJECT", id, java.util.Map.of());
+        return ProjectMapper.toResponse(saved);
     }
 
     @Override
@@ -145,6 +167,7 @@ public class ProjectServiceImpl implements ProjectService {
                 .orElseThrow(() -> new NotFoundException(ErrorCode.PROJECT_NOT_FOUND));
 
         repo.delete(project);
+        auditLogService.log("PROJECT_DELETED", currentUserId, "PROJECT", id, java.util.Map.of("key", project.getKey()));
     }
 
     private String normalizeKey(String raw) {
