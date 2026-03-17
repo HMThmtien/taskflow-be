@@ -51,6 +51,26 @@ public class SprintEntity extends BaseEntity {
     @Column(name = "completed_at")
     private Instant completedAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "completion_action", length = 30)
+    private SprintCompletionAction completionAction;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "completed_target_sprint_id")
+    private SprintEntity completedTargetSprint;
+
+    @Column(name = "completed_total_issues")
+    private Long completedTotalIssues;
+
+    @Column(name = "completed_done_issues")
+    private Long completedDoneIssues;
+
+    @Column(name = "completed_in_progress_issues")
+    private Long completedInProgressIssues;
+
+    @Column(name = "completed_todo_issues")
+    private Long completedTodoIssues;
+
     @Column(name = "position", nullable = false)
     private Integer position;
 

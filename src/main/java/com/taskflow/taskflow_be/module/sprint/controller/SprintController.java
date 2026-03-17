@@ -47,12 +47,21 @@ public class SprintController {
         return sprintService.start(projectId, sprintId);
     }
 
-    @PatchMapping("/sprints/{sprintId}/complete")
+    @PostMapping("/sprints/{sprintId}/complete")
     public SprintDtos.SprintResponse complete(
+            @PathVariable UUID projectId,
+            @PathVariable UUID sprintId,
+            @Valid @RequestBody SprintDtos.CompleteSprintRequest req
+    ) {
+        return sprintService.complete(projectId, sprintId, req);
+    }
+
+    @GetMapping("/sprints/{sprintId}/metrics")
+    public SprintDtos.SprintMetricsResponse metrics(
             @PathVariable UUID projectId,
             @PathVariable UUID sprintId
     ) {
-        return sprintService.complete(projectId, sprintId);
+        return sprintService.getMetrics(projectId, sprintId);
     }
 
     @GetMapping("/backlog/issues")

@@ -87,6 +87,7 @@ public class IssueCommentServiceImpl implements IssueCommentService {
         var saved = commentRepo.save(entity);
 
         List<UserEntity> mentionedUsers = resolveMentionedUsers(content, issue.getProject().getId(), author.getId());
+        Set<UUID> notifiedUserIds = new HashSet<>();
 
         for (UserEntity mentionedUser : mentionedUsers) {
             if (!commentMentionRepo.existsByComment_IdAndMentionedUser_Id(saved.getId(), mentionedUser.getId())) {
@@ -112,7 +113,10 @@ public class IssueCommentServiceImpl implements IssueCommentService {
                             .build()
             );
             notificationRealtimeService.publishCreated(notification);
+            notifiedUserIds.add(mentionedUser.getId());
         }
+
+        notifyCommentStakeholders(issue, author, notifiedUserIds);
 
         activityService.log(
                 issue,
@@ -137,6 +141,43 @@ public class IssueCommentServiceImpl implements IssueCommentService {
         );
 
         return response;
+    }
+
+    private void notifyCommentStakeholders(
+            com.taskflow.taskflow_be.module.issue.entity.IssueEntity issue,
+            UserEntity author,
+            Set<UUID> excludedUserIds
+    ) {
+        Set<UserEntity> recipients = new LinkedHashSet<>();
+
+        if (issue.getReporter() != null) {
+            recipients.add(issue.getReporter());
+        }
+
+        if (issue.getAssignee() != null) {
+            recipients.add(issue.getAssignee());
+        }
+
+        for (UserEntity recipient : recipients) {
+            if (recipient == null) continue;
+            if (recipient.getId().equals(author.getId())) continue;
+            if (excludedUserIds.contains(recipient.getId())) continue;
+
+            var notification = notificationRepo.save(
+                    NotificationEntity.builder()
+                            .user(recipient)
+                            .actor(author)
+                            .type("ISSUE_COMMENTED")
+                            .title("New comment on " + issue.getProject().getKey() + "-" + issue.getPosition())
+                            .body(author.getUsername() + " commented on " + issue.getTitle())
+                            .entityType("ISSUE")
+                            .entityId(issue.getId())
+                            .route("/app/projects/" + issue.getProject().getId() + "?issueId=" + issue.getId())
+                            .isRead(false)
+                            .build()
+            );
+            notificationRealtimeService.publishCreated(notification);
+        }
     }
 
     private List<UserEntity> resolveMentionedUsers(String content, UUID projectId, UUID authorId) {

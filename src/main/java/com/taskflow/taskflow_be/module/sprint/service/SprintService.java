@@ -15,7 +15,9 @@ public interface SprintService {
 
     SprintDtos.SprintResponse start(UUID projectId, UUID sprintId);
 
-    SprintDtos.SprintResponse complete(UUID projectId, UUID sprintId);
+    SprintDtos.SprintResponse complete(UUID projectId, UUID sprintId, SprintDtos.CompleteSprintRequest req);
+
+    SprintDtos.SprintMetricsResponse getMetrics(UUID projectId, UUID sprintId);
 
     List<IssueDtos.IssueResponse> listBacklogIssues(UUID projectId);
 
