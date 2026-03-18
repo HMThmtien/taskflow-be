@@ -43,6 +43,15 @@ public class IssueAttachmentEntity extends BaseEntity {
     @Column(name = "storage_path", nullable = false)
     private String storagePath;
 
+    @Column(name = "storage_provider", length = 50)
+    private String storageProvider;
+
+    @Column(name = "storage_bucket", length = 100)
+    private String storageBucket;
+
+    @Column(name = "storage_key", length = 500)
+    private String storageKey;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 

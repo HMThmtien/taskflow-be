@@ -1,6 +1,7 @@
 package com.taskflow.taskflow_be.module.issue.service;
 
 import com.taskflow.taskflow_be.common.util.SecurityUtils;
+import com.taskflow.taskflow_be.storage.FileStorageService;
 import com.taskflow.taskflow_be.exception.AppException;
 import com.taskflow.taskflow_be.exception.ErrorCode;
 import com.taskflow.taskflow_be.exception.NotFoundException;
@@ -39,6 +40,7 @@ public class IssueAttachmentServiceImpl implements IssueAttachmentService {
     private final ProjectPermissionService permission;
     private final IssueActivityLogService activityLogService;
     private final StorageProperties storageProperties;
+    private final FileStorageService fileStorageService;
 
     @Override
     @Transactional(readOnly = true)
@@ -77,23 +79,8 @@ public class IssueAttachmentServiceImpl implements IssueAttachmentService {
         String originalName = sanitizeOriginalName(file.getOriginalFilename());
 
         String safeName = UUID.randomUUID() + "_" + originalName;
-
-        Path baseDir = Paths.get(storageProperties.getUploadDir(), "issues", issueId.toString())
-                .toAbsolutePath()
-                .normalize();
-        Path targetPath = baseDir.resolve(safeName).normalize();
-        if (!targetPath.startsWith(baseDir)) {
-            throw new AppException(ErrorCode.BAD_REQUEST, HttpStatus.BAD_REQUEST, "Invalid file path");
-        }
-
-        try {
-            Files.createDirectories(baseDir);
-            Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
-        } catch (IOException e) {
-            throw new AppException(ErrorCode.BAD_REQUEST, HttpStatus.INTERNAL_SERVER_ERROR, "Cannot store file");
-        }
-
-        String publicUrl = "/uploads/issues/" + issueId + "/" + safeName;
+        String objectKey = Paths.get("issues", issueId.toString(), safeName).toString().replace('\\', '/');
+        FileStorageService.StoredFile storedFile = fileStorageService.store(objectKey, file);
 
         var entity = IssueAttachmentEntity.builder()
                 .issue(issue)
@@ -101,7 +88,10 @@ public class IssueAttachmentServiceImpl implements IssueAttachmentService {
                 .fileName(originalName)
                 .fileType(file.getContentType())
                 .fileSize(file.getSize())
-                .storagePath(publicUrl)
+                .storagePath(storedFile.legacyPath() == null ? storedFile.key() : storedFile.legacyPath())
+                .storageProvider(storedFile.provider())
+                .storageBucket(storedFile.bucket())
+                .storageKey(storedFile.key())
                 .build();
 
         entity = attachmentRepo.save(entity);
@@ -135,19 +125,10 @@ public class IssueAttachmentServiceImpl implements IssueAttachmentService {
             throw new NotFoundException(ErrorCode.NOT_FOUND, "Attachment not found");
         }
 
-        String prefix = "/uploads/issues/" + issueId + "/";
-        String fileName = attachment.getStoragePath().startsWith(prefix)
-                ? attachment.getStoragePath().substring(prefix.length())
-                : null;
-
-        if (fileName != null && !fileName.isBlank()) {
-            Path realPath = Paths.get(storageProperties.getUploadDir(), "issues", issueId.toString(), fileName)
-                    .toAbsolutePath()
-                    .normalize();
-            try {
-                Files.deleteIfExists(realPath);
-            } catch (IOException ignored) {
-            }
+        if (attachment.getStorageKey() != null && !attachment.getStorageKey().isBlank()) {
+            fileStorageService.delete(attachment);
+        } else {
+            deleteLegacyLocalFile(issueId, attachment);
         }
 
         attachmentRepo.delete(attachment);
@@ -163,6 +144,28 @@ public class IssueAttachmentServiceImpl implements IssueAttachmentService {
         );
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public String resolveDownloadUrl(UUID issueId, UUID attachmentId) {
+        UUID me = SecurityUtils.currentUserId();
+
+        var issue = issueRepo.findById(issueId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.ISSUE_NOT_FOUND, "Issue not found"));
+        permission.requireMember(issue.getProject().getId(), me);
+
+        var attachment = attachmentRepo.findById(attachmentId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.NOT_FOUND, "Attachment not found"));
+        if (!attachment.getIssue().getId().equals(issueId)) {
+            throw new NotFoundException(ErrorCode.NOT_FOUND, "Attachment not found");
+        }
+
+        if (attachment.getStorageKey() != null && !attachment.getStorageKey().isBlank()) {
+            return fileStorageService.createAccessUrl(attachment);
+        }
+
+        return attachment.getStoragePath();
+    }
+
     private IssueAttachmentDtos.AttachmentRes toResponse(IssueAttachmentEntity e) {
         return IssueAttachmentDtos.AttachmentRes.builder()
                 .id(e.getId())
@@ -172,7 +175,7 @@ public class IssueAttachmentServiceImpl implements IssueAttachmentService {
                 .fileName(e.getFileName())
                 .fileType(e.getFileType())
                 .fileSize(e.getFileSize())
-                .storagePath(e.getStoragePath())
+                .storagePath("/api/issues/" + e.getIssue().getId() + "/attachments/" + e.getId() + "/download")
                 .createdAt(e.getCreatedAt())
                 .build();
     }
@@ -214,5 +217,24 @@ public class IssueAttachmentServiceImpl implements IssueAttachmentService {
         }
 
         return sanitized;
+    }
+
+    private void deleteLegacyLocalFile(UUID issueId, IssueAttachmentEntity attachment) {
+        String prefix = "/uploads/issues/" + issueId + "/";
+        String fileName = attachment.getStoragePath().startsWith(prefix)
+                ? attachment.getStoragePath().substring(prefix.length())
+                : null;
+
+        if (fileName == null || fileName.isBlank()) {
+            return;
+        }
+
+        Path realPath = Paths.get(storageProperties.getUploadDir(), "issues", issueId.toString(), fileName)
+                .toAbsolutePath()
+                .normalize();
+        try {
+            Files.deleteIfExists(realPath);
+        } catch (IOException ignored) {
+        }
     }
 }

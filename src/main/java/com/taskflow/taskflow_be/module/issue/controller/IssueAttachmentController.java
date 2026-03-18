@@ -4,9 +4,12 @@ import com.taskflow.taskflow_be.common.response.ApiResponse;
 import com.taskflow.taskflow_be.module.issue.dto.IssueAttachmentDtos;
 import com.taskflow.taskflow_be.module.issue.service.IssueAttachmentService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -40,5 +43,16 @@ public class IssueAttachmentController {
     ) {
         issueAttachmentService.delete(issueId, attachmentId);
         return ApiResponse.ok(Map.of("message", "Attachment deleted"));
+    }
+
+    @GetMapping("/{attachmentId}/download")
+    public ResponseEntity<Void> download(
+            @PathVariable UUID issueId,
+            @PathVariable UUID attachmentId
+    ) {
+        String url = issueAttachmentService.resolveDownloadUrl(issueId, attachmentId);
+        return ResponseEntity.status(302)
+                .header(HttpHeaders.LOCATION, URI.create(url).toString())
+                .build();
     }
 }

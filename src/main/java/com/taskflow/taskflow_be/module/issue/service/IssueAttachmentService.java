@@ -10,4 +10,5 @@ public interface IssueAttachmentService {
     List<IssueAttachmentDtos.AttachmentRes> list(UUID issueId);
     IssueAttachmentDtos.AttachmentRes upload(UUID issueId, MultipartFile file);
     void delete(UUID issueId, UUID attachmentId);
+    String resolveDownloadUrl(UUID issueId, UUID attachmentId);
 }
