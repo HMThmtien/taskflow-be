@@ -19,11 +19,26 @@ spring:
 management:
   endpoints:
     web:
+      base-path: /actuator
       exposure:
         include: health,info,metrics
   endpoint:
     health:
       show-details: never
+      probes:
+        enabled: true
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+  metrics:
+    tags:
+      application: taskflow-be
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} level=%-5level requestId=%X{requestId:-} logger=%logger{36} msg=%msg%n"
 
 taskflow:
   cors:

@@ -12,6 +12,9 @@ spring:
         format_sql: false
 
 taskflow:
+  storage:
+    upload-dir: ${UPLOAD_DIR:/app/uploads}
+
   jwt:
     secret: ${JWT_SECRET}
     access-token-minutes: ${JWT_ACCESS_TOKEN_MINUTES:15}
@@ -20,3 +23,8 @@ taskflow:
   cors:
     allowed-origins:
       - ${FRONTEND_URL}
+
+management:
+  endpoint:
+    health:
+      show-details: never

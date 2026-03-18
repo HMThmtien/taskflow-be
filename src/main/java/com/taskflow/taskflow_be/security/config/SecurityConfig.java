@@ -58,6 +58,11 @@ public class SecurityConfig {
     }
 
     @Bean
+    public com.taskflow.taskflow_be.security.filter.ApiRateLimitFilter apiRateLimitFilter() {
+        return new com.taskflow.taskflow_be.security.filter.ApiRateLimitFilter();
+    }
+
+    @Bean
     public SecurityFilterChain filterChain(
             HttpSecurity http,
             JwtAuthFilter jwtAuthFilter,
@@ -97,13 +102,14 @@ public class SecurityConfig {
                                 "/api/auth/login",
                                 "/api/auth/register",
                                 "/api/auth/refresh",
-                                "/actuator/health",
+                                "/actuator/health/**",
                                 "/actuator/info"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(requestCorrelationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(authRateLimitFilter(), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(apiRateLimitFilter(), UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }

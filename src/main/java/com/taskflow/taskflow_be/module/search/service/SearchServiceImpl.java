@@ -1,6 +1,8 @@
 package com.taskflow.taskflow_be.module.search.service;
 
 import com.taskflow.taskflow_be.common.util.SecurityUtils;
+import com.taskflow.taskflow_be.exception.AppException;
+import com.taskflow.taskflow_be.exception.ErrorCode;
 import com.taskflow.taskflow_be.module.auth.entity.GlobalRole;
 import com.taskflow.taskflow_be.module.auth.entity.UserEntity;
 import com.taskflow.taskflow_be.module.auth.repository.UserRepository;
@@ -11,6 +13,7 @@ import com.taskflow.taskflow_be.module.project.repository.ProjectRepository;
 import com.taskflow.taskflow_be.module.search.dto.SearchDtos;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +25,8 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class SearchServiceImpl implements SearchService {
 
+    private static final int MAX_QUERY_LENGTH = 100;
+
     private final ProjectRepository projectRepository;
     private final IssueRepository issueRepository;
     private final UserRepository userRepository;
@@ -29,7 +34,7 @@ public class SearchServiceImpl implements SearchService {
 
     @Override
     public SearchDtos.SearchResponse search(String q, int limit) {
-        String query = q == null ? "" : q.trim();
+        String query = normalizeQuery(q);
         if (query.isBlank()) {
             return SearchDtos.SearchResponse.builder()
                     .projects(List.of())
@@ -92,6 +97,14 @@ public class SearchServiceImpl implements SearchService {
                 .issues(issues)
                 .users(users)
                 .build();
+    }
+
+    private String normalizeQuery(String q) {
+        String query = q == null ? "" : q.trim().replaceAll("\\s+", " ");
+        if (query.length() > MAX_QUERY_LENGTH) {
+            throw new AppException(ErrorCode.BAD_REQUEST, HttpStatus.BAD_REQUEST, "Search query must be 100 characters or fewer");
+        }
+        return query;
     }
 
     private List<UserEntity> searchUsers(

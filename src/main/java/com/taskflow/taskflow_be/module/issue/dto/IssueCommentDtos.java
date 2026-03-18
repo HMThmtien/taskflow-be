@@ -1,6 +1,7 @@
 package com.taskflow.taskflow_be.module.issue.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -14,6 +15,7 @@ public class IssueCommentDtos {
     @Getter @Setter
     public static class CreateReq {
         @NotBlank
+        @Size(max = 5000)
         private String content;
     }
 

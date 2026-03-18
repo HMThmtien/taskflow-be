@@ -1,6 +1,7 @@
 package com.taskflow.taskflow_be.module.issue.service;
 
 import com.taskflow.taskflow_be.common.util.SecurityUtils;
+import com.taskflow.taskflow_be.exception.AppException;
 import com.taskflow.taskflow_be.exception.ErrorCode;
 import com.taskflow.taskflow_be.exception.NotFoundException;
 import com.taskflow.taskflow_be.module.auth.entity.UserEntity;
@@ -22,6 +23,7 @@ import com.taskflow.taskflow_be.module.realtime.service.RealtimeEventService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -75,7 +77,7 @@ public class IssueCommentServiceImpl implements IssueCommentService {
 
         String content = req.getContent() == null ? null : req.getContent().trim();
         if (content == null || content.isBlank()) {
-            throw new IllegalArgumentException("content must not be blank");
+            throw new AppException(ErrorCode.BAD_REQUEST, HttpStatus.BAD_REQUEST, "Comment content must not be blank");
         }
 
         var entity = IssueCommentEntity.builder()
