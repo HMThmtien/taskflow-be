@@ -5,6 +5,10 @@ server:
 spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
 
   jpa:
     hibernate:
@@ -43,3 +47,11 @@ logging:
 taskflow:
   cors:
     allowed-origins: []
+  storage:
+    max-file-size-bytes: 10485760
+    allowed-content-types:
+      - image/jpeg
+      - image/png
+      - image/webp
+      - application/pdf
+      - text/plain

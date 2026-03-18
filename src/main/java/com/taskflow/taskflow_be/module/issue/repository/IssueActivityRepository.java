@@ -60,4 +60,61 @@ public interface IssueActivityRepository extends JpaRepository<IssueActivityEnti
             IssueActivityType type,
             Pageable pageable
     );
+
+    @Query("""
+        select ia
+        from IssueActivityEntity ia
+        join ia.issue i
+        join i.project p
+        where p.id in (
+            select pm.project.id
+            from ProjectMemberEntity pm
+            where pm.user.id = :userId
+        )
+          and (:projectId is null or p.id = :projectId)
+          and (:type is null or ia.type = :type)
+          and (
+              lower(i.title) like lower(concat('%', :q, '%'))
+              or lower(p.key) like lower(concat('%', :q, '%'))
+              or lower(p.name) like lower(concat('%', :q, '%'))
+          )
+        order by ia.createdAt desc
+    """)
+    Page<IssueActivityEntity> searchWorkspaceActivities(
+            UUID userId,
+            UUID projectId,
+            String q,
+            IssueActivityType type,
+            Pageable pageable
+    );
+
+    @Query("""
+        select ia
+        from IssueActivityEntity ia
+        join ia.issue i
+        join i.project p
+        join ia.actor a
+        where p.id in (
+            select pm.project.id
+            from ProjectMemberEntity pm
+            where pm.user.id = :userId
+        )
+          and (:projectId is null or p.id = :projectId)
+          and (:type is null or ia.type = :type)
+          and (
+              lower(i.title) like lower(concat('%', :q, '%'))
+              or lower(p.key) like lower(concat('%', :q, '%'))
+              or lower(p.name) like lower(concat('%', :q, '%'))
+          )
+          and lower(a.username) like lower(concat('%', :actor, '%'))
+        order by ia.createdAt desc
+    """)
+    Page<IssueActivityEntity> searchWorkspaceActivitiesByActor(
+            UUID userId,
+            UUID projectId,
+            String q,
+            String actor,
+            IssueActivityType type,
+            Pageable pageable
+    );
 }

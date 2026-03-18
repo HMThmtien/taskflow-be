@@ -1,5 +1,6 @@
 package com.taskflow.taskflow_be.module.sprint.service;
 
+import com.taskflow.taskflow_be.config.CacheConfig;
 import com.taskflow.taskflow_be.common.util.SecurityUtils;
 import com.taskflow.taskflow_be.exception.AppException;
 import com.taskflow.taskflow_be.exception.ErrorCode;
@@ -16,6 +17,8 @@ import com.taskflow.taskflow_be.module.sprint.entity.SprintEntity;
 import com.taskflow.taskflow_be.module.sprint.entity.SprintStatus;
 import com.taskflow.taskflow_be.module.sprint.repository.SprintRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,6 +53,11 @@ public class SprintServiceImpl implements SprintService {
     }
 
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheConfig.PROJECT_REPORT_SUMMARY_CACHE, key = "#projectId"),
+            @CacheEvict(cacheNames = CacheConfig.PROJECT_REPORT_WORKLOAD_CACHE, key = "#projectId"),
+            @CacheEvict(cacheNames = CacheConfig.PROJECT_REPORT_SPRINT_PROGRESS_CACHE, key = "#projectId")
+    })
     public SprintDtos.SprintResponse create(UUID projectId, SprintDtos.CreateSprintRequest req) {
         UUID currentUserId = SecurityUtils.currentUserId();
         permission.requireAdmin(projectId, currentUserId);
@@ -72,6 +80,11 @@ public class SprintServiceImpl implements SprintService {
     }
 
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheConfig.PROJECT_REPORT_SUMMARY_CACHE, key = "#projectId"),
+            @CacheEvict(cacheNames = CacheConfig.PROJECT_REPORT_WORKLOAD_CACHE, key = "#projectId"),
+            @CacheEvict(cacheNames = CacheConfig.PROJECT_REPORT_SPRINT_PROGRESS_CACHE, key = "#projectId")
+    })
     public SprintDtos.SprintResponse update(UUID projectId, UUID sprintId, SprintDtos.UpdateSprintRequest req) {
         UUID currentUserId = SecurityUtils.currentUserId();
         permission.requireAdmin(projectId, currentUserId);
@@ -92,6 +105,11 @@ public class SprintServiceImpl implements SprintService {
     }
 
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheConfig.PROJECT_REPORT_SUMMARY_CACHE, key = "#projectId"),
+            @CacheEvict(cacheNames = CacheConfig.PROJECT_REPORT_WORKLOAD_CACHE, key = "#projectId"),
+            @CacheEvict(cacheNames = CacheConfig.PROJECT_REPORT_SPRINT_PROGRESS_CACHE, key = "#projectId")
+    })
     public SprintDtos.SprintResponse start(UUID projectId, UUID sprintId) {
         UUID currentUserId = SecurityUtils.currentUserId();
         permission.requireAdmin(projectId, currentUserId);
@@ -121,6 +139,11 @@ public class SprintServiceImpl implements SprintService {
     }
 
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheConfig.PROJECT_REPORT_SUMMARY_CACHE, key = "#projectId"),
+            @CacheEvict(cacheNames = CacheConfig.PROJECT_REPORT_WORKLOAD_CACHE, key = "#projectId"),
+            @CacheEvict(cacheNames = CacheConfig.PROJECT_REPORT_SPRINT_PROGRESS_CACHE, key = "#projectId")
+    })
     public SprintDtos.SprintResponse complete(UUID projectId, UUID sprintId, SprintDtos.CompleteSprintRequest req) {
         UUID currentUserId = SecurityUtils.currentUserId();
         permission.requireAdmin(projectId, currentUserId);
@@ -217,6 +240,11 @@ public class SprintServiceImpl implements SprintService {
     }
 
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheConfig.PROJECT_REPORT_SUMMARY_CACHE, key = "#projectId"),
+            @CacheEvict(cacheNames = CacheConfig.PROJECT_REPORT_WORKLOAD_CACHE, key = "#projectId"),
+            @CacheEvict(cacheNames = CacheConfig.PROJECT_REPORT_SPRINT_PROGRESS_CACHE, key = "#projectId")
+    })
     public IssueDtos.IssueResponse assignIssue(UUID projectId, UUID issueId, UUID sprintId) {
         UUID currentUserId = SecurityUtils.currentUserId();
         permission.requireWrite(projectId, currentUserId);

@@ -16,6 +16,13 @@ spring:
 taskflow:
   storage:
     upload-dir: uploads
+    max-file-size-bytes: 10485760
+    allowed-content-types:
+      - image/jpeg
+      - image/png
+      - image/webp
+      - application/pdf
+      - text/plain
 
   jwt:
     secret: PWWpaneD7Lr2RFPOBtwYKc1PkxkRKdahAJp99bSvxqY=

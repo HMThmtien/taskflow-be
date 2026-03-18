@@ -75,6 +75,14 @@ public class IssueController {
         return service.move(projectId, issueId, req);
     }
 
+    @PostMapping("/bulk")
+    public List<IssueDtos.IssueResponse> bulkUpdate(
+            @PathVariable UUID projectId,
+            @Valid @RequestBody IssueDtos.BulkUpdateIssueRequest req
+    ) {
+        return service.bulkUpdate(projectId, req);
+    }
+
     @GetMapping("/{issueId}/subtasks")
     public List<IssueDtos.IssueResponse> listSubtasks(
             @PathVariable UUID projectId,

@@ -20,13 +20,18 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.file.*;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class IssueAttachmentServiceImpl implements IssueAttachmentService {
+
+    private static final int MAX_FILE_NAME_LENGTH = 180;
 
     private final IssueRepository issueRepo;
     private final IssueAttachmentRepository attachmentRepo;
@@ -67,14 +72,19 @@ public class IssueAttachmentServiceImpl implements IssueAttachmentService {
             throw new AppException(ErrorCode.BAD_REQUEST, HttpStatus.BAD_REQUEST, "file must not be empty");
         }
 
-        String originalName = file.getOriginalFilename() == null
-                ? "file"
-                : Paths.get(file.getOriginalFilename()).getFileName().toString();
+        validateFile(file);
+
+        String originalName = sanitizeOriginalName(file.getOriginalFilename());
 
         String safeName = UUID.randomUUID() + "_" + originalName;
 
-        Path baseDir = Paths.get(storageProperties.getUploadDir(), "issues", issueId.toString());
-        Path targetPath = baseDir.resolve(safeName);
+        Path baseDir = Paths.get(storageProperties.getUploadDir(), "issues", issueId.toString())
+                .toAbsolutePath()
+                .normalize();
+        Path targetPath = baseDir.resolve(safeName).normalize();
+        if (!targetPath.startsWith(baseDir)) {
+            throw new AppException(ErrorCode.BAD_REQUEST, HttpStatus.BAD_REQUEST, "Invalid file path");
+        }
 
         try {
             Files.createDirectories(baseDir);
@@ -131,7 +141,9 @@ public class IssueAttachmentServiceImpl implements IssueAttachmentService {
                 : null;
 
         if (fileName != null && !fileName.isBlank()) {
-            Path realPath = Paths.get(storageProperties.getUploadDir(), "issues", issueId.toString(), fileName);
+            Path realPath = Paths.get(storageProperties.getUploadDir(), "issues", issueId.toString(), fileName)
+                    .toAbsolutePath()
+                    .normalize();
             try {
                 Files.deleteIfExists(realPath);
             } catch (IOException ignored) {
@@ -163,5 +175,44 @@ public class IssueAttachmentServiceImpl implements IssueAttachmentService {
                 .storagePath(e.getStoragePath())
                 .createdAt(e.getCreatedAt())
                 .build();
+    }
+
+    private void validateFile(MultipartFile file) {
+        if (file.getSize() > storageProperties.getMaxFileSizeBytes()) {
+            throw new AppException(ErrorCode.BAD_REQUEST, HttpStatus.BAD_REQUEST, "File is too large");
+        }
+
+        String contentType = file.getContentType();
+        Set<String> allowedContentTypes = new HashSet<>(storageProperties.getAllowedContentTypes());
+        if (contentType == null || !allowedContentTypes.contains(contentType.toLowerCase(Locale.ROOT))) {
+            throw new AppException(ErrorCode.BAD_REQUEST, HttpStatus.BAD_REQUEST, "File type is not allowed");
+        }
+    }
+
+    private String sanitizeOriginalName(String originalFilename) {
+        String baseName = originalFilename == null
+                ? "file"
+                : Paths.get(originalFilename).getFileName().toString();
+        String sanitized = baseName
+                .replaceAll("[\\r\\n\\t]", "_")
+                .replaceAll("[^a-zA-Z0-9._ -]", "_")
+                .trim();
+
+        if (sanitized.isBlank()) {
+            sanitized = "file";
+        }
+
+        if (sanitized.length() > MAX_FILE_NAME_LENGTH) {
+            int extensionIndex = sanitized.lastIndexOf('.');
+            if (extensionIndex > 0 && extensionIndex < sanitized.length() - 1) {
+                String extension = sanitized.substring(extensionIndex);
+                int baseLength = Math.max(1, MAX_FILE_NAME_LENGTH - extension.length());
+                sanitized = sanitized.substring(0, baseLength) + extension;
+            } else {
+                sanitized = sanitized.substring(0, MAX_FILE_NAME_LENGTH);
+            }
+        }
+
+        return sanitized;
     }
 }

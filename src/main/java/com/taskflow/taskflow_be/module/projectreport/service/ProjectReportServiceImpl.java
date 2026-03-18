@@ -1,5 +1,6 @@
 package com.taskflow.taskflow_be.module.projectreport.service;
 
+import com.taskflow.taskflow_be.config.CacheConfig;
 import com.taskflow.taskflow_be.common.util.SecurityUtils;
 import com.taskflow.taskflow_be.exception.ErrorCode;
 import com.taskflow.taskflow_be.exception.NotFoundException;
@@ -12,6 +13,7 @@ import com.taskflow.taskflow_be.module.projectreport.dto.ProjectReportDtos;
 import com.taskflow.taskflow_be.module.sprint.entity.SprintStatus;
 import com.taskflow.taskflow_be.module.sprint.repository.SprintRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +37,7 @@ public class ProjectReportServiceImpl implements ProjectReportService {
     private final Clock clock = Clock.systemUTC();
 
     @Override
+    @Cacheable(cacheNames = CacheConfig.PROJECT_REPORT_SUMMARY_CACHE, key = "#projectId")
     public ProjectReportDtos.ProjectSummaryResponse getSummary(UUID projectId) {
         requireMember(projectId);
         LocalDate today = LocalDate.now(clock.withZone(ZoneOffset.UTC));
@@ -82,6 +85,7 @@ public class ProjectReportServiceImpl implements ProjectReportService {
     }
 
     @Override
+    @Cacheable(cacheNames = CacheConfig.PROJECT_REPORT_WORKLOAD_CACHE, key = "#projectId")
     public ProjectReportDtos.WorkloadResponse getWorkload(UUID projectId) {
         requireMember(projectId);
         LocalDate today = LocalDate.now(clock.withZone(ZoneOffset.UTC));
@@ -104,6 +108,7 @@ public class ProjectReportServiceImpl implements ProjectReportService {
     }
 
     @Override
+    @Cacheable(cacheNames = CacheConfig.PROJECT_REPORT_SPRINT_PROGRESS_CACHE, key = "#projectId")
     public ProjectReportDtos.SprintProgressResponse getSprintProgress(UUID projectId) {
         requireMember(projectId);
         return ProjectReportDtos.SprintProgressResponse.builder()

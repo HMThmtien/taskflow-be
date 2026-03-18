@@ -1,6 +1,8 @@
 package com.taskflow.taskflow_be.module.workspace.service;
 
 import com.taskflow.taskflow_be.common.util.SecurityUtils;
+import com.taskflow.taskflow_be.exception.AppException;
+import com.taskflow.taskflow_be.exception.ErrorCode;
 import com.taskflow.taskflow_be.module.auth.entity.UserEntity;
 import com.taskflow.taskflow_be.module.auth.repository.UserRepository;
 import com.taskflow.taskflow_be.module.issue.entity.IssueActivityEntity;
@@ -9,6 +11,7 @@ import com.taskflow.taskflow_be.module.issue.repository.IssueActivityRepository;
 import com.taskflow.taskflow_be.module.workspace.dto.WorkspaceActivityDtos;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -16,6 +19,10 @@ import java.util.UUID;
 
 @Service
 public class WorkspaceActivityServiceImpl implements WorkspaceActivityService {
+
+    private static final int MAX_PAGE_SIZE = 100;
+    private static final int MAX_QUERY_LENGTH = 100;
+    private static final int MAX_ACTOR_LENGTH = 50;
 
     private final IssueActivityRepository issueActivityRepository;
     private final UserRepository userRepository;
@@ -40,7 +47,7 @@ public class WorkspaceActivityServiceImpl implements WorkspaceActivityService {
         UUID currentUserId = getCurrentUser().getId();
 
         int safePage = Math.max(page, 1);
-        int safePageSize = Math.max(pageSize, 1);
+        int safePageSize = Math.max(1, Math.min(pageSize, MAX_PAGE_SIZE));
 
         var pageable = PageRequest.of(
                 safePage - 1,
@@ -48,22 +55,16 @@ public class WorkspaceActivityServiceImpl implements WorkspaceActivityService {
                 Sort.by(Sort.Direction.DESC, "createdAt")
         );
 
-        var actorFilter = actor != null && !actor.isBlank() ? actor.trim() : null;
+        var actorFilter = normalizeOptional(actor, MAX_ACTOR_LENGTH, "Actor filter is too long");
+        var queryFilter = normalizeOptional(q, MAX_QUERY_LENGTH, "Search query is too long");
 
         var result = actorFilter == null
-                ? issueActivityRepository.findWorkspaceActivities(
-                currentUserId,
-                projectId,
-                type,
-                pageable
-        )
-                : issueActivityRepository.findWorkspaceActivitiesByActor(
-                currentUserId,
-                projectId,
-                actorFilter,
-                type,
-                pageable
-        );
+                ? (queryFilter == null
+                    ? issueActivityRepository.findWorkspaceActivities(currentUserId, projectId, type, pageable)
+                    : issueActivityRepository.searchWorkspaceActivities(currentUserId, projectId, queryFilter, type, pageable))
+                : (queryFilter == null
+                    ? issueActivityRepository.findWorkspaceActivitiesByActor(currentUserId, projectId, actorFilter, type, pageable)
+                    : issueActivityRepository.searchWorkspaceActivitiesByActor(currentUserId, projectId, queryFilter, actorFilter, type, pageable));
 
         var response = new WorkspaceActivityDtos.ActivityPageResponse();
         response.setItems(result.getContent().stream().map(this::toResponse).toList());
@@ -76,7 +77,17 @@ public class WorkspaceActivityServiceImpl implements WorkspaceActivityService {
     private UserEntity getCurrentUser() {
         var username = SecurityUtils.currentUsername();
         return userRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + username));
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, HttpStatus.NOT_FOUND, "User not found"));
+    }
+
+    private String normalizeOptional(String value, int maxLength, String message) {
+        if (value == null) return null;
+        String normalized = value.trim().replaceAll("\\s+", " ");
+        if (normalized.isBlank()) return null;
+        if (normalized.length() > maxLength) {
+            throw new AppException(ErrorCode.BAD_REQUEST, HttpStatus.BAD_REQUEST, message);
+        }
+        return normalized;
     }
 
     private WorkspaceActivityDtos.ActivityResponse toResponse(IssueActivityEntity entity) {

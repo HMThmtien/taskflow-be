@@ -1,6 +1,8 @@
 package com.taskflow.taskflow_be.module.issue.service;
 
+import com.taskflow.taskflow_be.config.CacheConfig;
 import com.taskflow.taskflow_be.common.util.SecurityUtils;
+import com.taskflow.taskflow_be.exception.AppException;
 import com.taskflow.taskflow_be.exception.ErrorCode;
 import com.taskflow.taskflow_be.exception.NotFoundException;
 import com.taskflow.taskflow_be.module.auth.repository.UserRepository;
@@ -14,15 +16,22 @@ import com.taskflow.taskflow_be.module.issue.repository.IssueRepository;
 import com.taskflow.taskflow_be.module.issue.repository.IssueSpecs;
 import com.taskflow.taskflow_be.module.project.repository.ProjectRepository;
 import com.taskflow.taskflow_be.module.project.service.ProjectPermissionService;
+import com.taskflow.taskflow_be.module.sprint.entity.SprintStatus;
+import com.taskflow.taskflow_be.module.sprint.repository.SprintRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 
@@ -36,6 +45,7 @@ public class IssueServiceImpl implements IssueService {
     private final ProjectPermissionService permission;
     private final UserRepository userRepo;
     private final IssueActivityLogService activityLogService;
+    private final SprintRepository sprintRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -72,6 +82,11 @@ public class IssueServiceImpl implements IssueService {
     }
 
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheConfig.PROJECT_REPORT_SUMMARY_CACHE, key = "#projectId"),
+            @CacheEvict(cacheNames = CacheConfig.PROJECT_REPORT_WORKLOAD_CACHE, key = "#projectId"),
+            @CacheEvict(cacheNames = CacheConfig.PROJECT_REPORT_SPRINT_PROGRESS_CACHE, key = "#projectId")
+    })
     public IssueDtos.IssueResponse create(UUID projectId, IssueDtos.CreateIssueRequest req) {
         UUID userId = SecurityUtils.currentUserId();
         permission.requireWrite(projectId, userId);
@@ -84,9 +99,9 @@ public class IssueServiceImpl implements IssueService {
 
         String title = req.getTitle() == null ? null : req.getTitle().trim();
         if (title == null || title.isBlank()) {
-            throw new com.taskflow.taskflow_be.exception.AppException(
+            throw new AppException(
                     ErrorCode.BAD_REQUEST,
-                    org.springframework.http.HttpStatus.BAD_REQUEST,
+                    HttpStatus.BAD_REQUEST,
                     "title must not be blank"
             );
         }
@@ -124,6 +139,11 @@ public class IssueServiceImpl implements IssueService {
     }
 
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheConfig.PROJECT_REPORT_SUMMARY_CACHE, key = "#projectId"),
+            @CacheEvict(cacheNames = CacheConfig.PROJECT_REPORT_WORKLOAD_CACHE, key = "#projectId"),
+            @CacheEvict(cacheNames = CacheConfig.PROJECT_REPORT_SPRINT_PROGRESS_CACHE, key = "#projectId")
+    })
     public IssueDtos.IssueResponse update(UUID projectId, UUID issueId, IssueDtos.UpdateIssueRequest req) {
         UUID userId = SecurityUtils.currentUserId();
         permission.requireWrite(projectId, userId);
@@ -144,9 +164,9 @@ public class IssueServiceImpl implements IssueService {
         if (req.getTitle() != null) {
             String title = req.getTitle().trim();
             if (title.isBlank()) {
-                throw new com.taskflow.taskflow_be.exception.AppException(
+                throw new AppException(
                         ErrorCode.BAD_REQUEST,
-                        org.springframework.http.HttpStatus.BAD_REQUEST,
+                        HttpStatus.BAD_REQUEST,
                         "title must not be blank"
                 );
             }
@@ -251,6 +271,11 @@ public class IssueServiceImpl implements IssueService {
     }
 
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheConfig.PROJECT_REPORT_SUMMARY_CACHE, key = "#projectId"),
+            @CacheEvict(cacheNames = CacheConfig.PROJECT_REPORT_WORKLOAD_CACHE, key = "#projectId"),
+            @CacheEvict(cacheNames = CacheConfig.PROJECT_REPORT_SPRINT_PROGRESS_CACHE, key = "#projectId")
+    })
     public IssueDtos.IssueResponse move(UUID projectId, UUID issueId, IssueDtos.MoveIssueRequest req) {
         UUID userId = SecurityUtils.currentUserId();
         permission.requireWrite(projectId, userId);
@@ -263,9 +288,9 @@ public class IssueServiceImpl implements IssueService {
         }
 
         if (req.getStatus() == null) {
-            throw new com.taskflow.taskflow_be.exception.AppException(
+            throw new AppException(
                     ErrorCode.BAD_REQUEST,
-                    org.springframework.http.HttpStatus.BAD_REQUEST,
+                    HttpStatus.BAD_REQUEST,
                     "status is required"
             );
         }
@@ -284,6 +309,127 @@ public class IssueServiceImpl implements IssueService {
                 java.util.Map.of("from", oldStatus.name(), "to", nextStatus.name()));
 
         return IssueMapper.toResponse(issue);
+    }
+
+    @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheConfig.PROJECT_REPORT_SUMMARY_CACHE, key = "#projectId"),
+            @CacheEvict(cacheNames = CacheConfig.PROJECT_REPORT_WORKLOAD_CACHE, key = "#projectId"),
+            @CacheEvict(cacheNames = CacheConfig.PROJECT_REPORT_SPRINT_PROGRESS_CACHE, key = "#projectId")
+    })
+    public List<IssueDtos.IssueResponse> bulkUpdate(UUID projectId, IssueDtos.BulkUpdateIssueRequest req) {
+        UUID userId = SecurityUtils.currentUserId();
+        permission.requireWrite(projectId, userId);
+        ensureProject(projectId);
+
+        List<UUID> issueIds = req.getIssueIds().stream().distinct().toList();
+        if (issueIds.isEmpty()) {
+            throw new AppException(ErrorCode.BAD_REQUEST, HttpStatus.BAD_REQUEST, "At least one issue is required");
+        }
+
+        boolean changesAssignee = req.isClearAssignee() || req.getAssigneeId() != null;
+        boolean changesSprint = req.isClearSprint() || req.getSprintId() != null;
+        boolean hasAnyChange = req.getStatus() != null
+                || req.getPriority() != null
+                || changesAssignee
+                || changesSprint
+                || req.getDueDate() != null
+                || req.getLabels() != null;
+        if (!hasAnyChange) {
+            throw new AppException(ErrorCode.BAD_REQUEST, HttpStatus.BAD_REQUEST, "At least one bulk change is required");
+        }
+        if (req.isClearAssignee() && req.getAssigneeId() != null) {
+            throw new AppException(ErrorCode.BAD_REQUEST, HttpStatus.BAD_REQUEST, "Assignee action is ambiguous");
+        }
+        if (req.isClearSprint() && req.getSprintId() != null) {
+            throw new AppException(ErrorCode.BAD_REQUEST, HttpStatus.BAD_REQUEST, "Sprint action is ambiguous");
+        }
+
+        List<IssueEntity> issues = issueRepo.findAllById(issueIds);
+        if (issues.size() != issueIds.size()) {
+            throw new NotFoundException(ErrorCode.ISSUE_NOT_FOUND, "One or more issues were not found");
+        }
+        if (issues.stream().anyMatch(issue -> !issue.getProject().getId().equals(projectId))) {
+            throw new NotFoundException(ErrorCode.ISSUE_NOT_FOUND, "One or more issues do not belong to this project");
+        }
+
+        var assignee = req.getAssigneeId() != null ? resolveAssignee(projectId, req.getAssigneeId()) : null;
+        var sprint = req.getSprintId() != null
+                ? sprintRepository.findByIdAndProject_Id(req.getSprintId(), projectId)
+                    .orElseThrow(() -> new NotFoundException(ErrorCode.NOT_FOUND, "Sprint not found"))
+                : null;
+        if (sprint != null && sprint.getStatus() == SprintStatus.COMPLETED) {
+            throw new AppException(ErrorCode.BAD_REQUEST, HttpStatus.BAD_REQUEST, "Cannot assign issues to a completed sprint");
+        }
+
+        for (IssueEntity issue : issues) {
+            if (issue.getSprint() != null && issue.getSprint().getStatus() == SprintStatus.COMPLETED) {
+                throw new AppException(ErrorCode.BAD_REQUEST, HttpStatus.BAD_REQUEST, "Completed sprint history is read-only");
+            }
+
+            HashMap<String, String> payload = new HashMap<>();
+
+            if (req.getStatus() != null && req.getStatus() != issue.getStatus()) {
+                payload.put("statusFrom", issue.getStatus().name());
+                payload.put("statusTo", req.getStatus().name());
+                issue.setStatus(req.getStatus());
+                issue.setPosition(issueRepo.maxPosition(projectId, req.getStatus()) + 1);
+            }
+
+            if (req.getPriority() != null && req.getPriority() != issue.getPriority()) {
+                payload.put("priorityFrom", issue.getPriority().name());
+                payload.put("priorityTo", req.getPriority().name());
+                issue.setPriority(req.getPriority());
+            }
+
+            if (changesAssignee) {
+                UUID oldAssigneeId = issue.getAssignee() == null ? null : issue.getAssignee().getId();
+                UUID newAssigneeId = req.isClearAssignee() ? null : req.getAssigneeId();
+                if (!Objects.equals(oldAssigneeId, newAssigneeId)) {
+                    payload.put("assigneeFrom", oldAssigneeId == null ? "" : oldAssigneeId.toString());
+                    payload.put("assigneeTo", newAssigneeId == null ? "" : newAssigneeId.toString());
+                    issue.setAssignee(req.isClearAssignee() ? null : assignee);
+                }
+            }
+
+            if (changesSprint) {
+                UUID oldSprintId = issue.getSprint() == null ? null : issue.getSprint().getId();
+                UUID newSprintId = req.isClearSprint() ? null : req.getSprintId();
+                if (!Objects.equals(oldSprintId, newSprintId)) {
+                    payload.put("sprintFrom", oldSprintId == null ? "" : oldSprintId.toString());
+                    payload.put("sprintTo", newSprintId == null ? "" : newSprintId.toString());
+                    issue.setSprint(req.isClearSprint() ? null : sprint);
+                }
+            }
+
+            if (req.getDueDate() != null && !Objects.equals(issue.getDueDate(), req.getDueDate())) {
+                payload.put("dueDateFrom", issue.getDueDate() == null ? "" : issue.getDueDate().toString());
+                payload.put("dueDateTo", req.getDueDate().toString());
+                issue.setDueDate(req.getDueDate());
+            }
+
+            if (req.getLabels() != null) {
+                List<String> labels = normalizeLabels(req.getLabels());
+                if (!Objects.equals(issue.getLabels(), labels)) {
+                    payload.put("labelsTo", String.join(",", labels));
+                    issue.setLabels(labels);
+                }
+            }
+
+            if (!payload.isEmpty()) {
+                payload.put("bulk", "true");
+                activityLogService.log(
+                        userId,
+                        issue,
+                        com.taskflow.taskflow_be.module.issue.entity.IssueActivityType.ISSUE_UPDATED,
+                        payload
+                );
+            }
+        }
+
+        return issueRepo.saveAll(issues).stream()
+                .map(IssueMapper::toResponse)
+                .toList();
     }
 
     @Override
@@ -307,6 +453,11 @@ public class IssueServiceImpl implements IssueService {
     }
 
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheConfig.PROJECT_REPORT_SUMMARY_CACHE, key = "#projectId"),
+            @CacheEvict(cacheNames = CacheConfig.PROJECT_REPORT_WORKLOAD_CACHE, key = "#projectId"),
+            @CacheEvict(cacheNames = CacheConfig.PROJECT_REPORT_SPRINT_PROGRESS_CACHE, key = "#projectId")
+    })
     public IssueDtos.IssueResponse createSubtask(UUID projectId, UUID parentIssueId, IssueDtos.CreateIssueRequest req) {
 
         UUID userId = SecurityUtils.currentUserId();
@@ -327,9 +478,9 @@ public class IssueServiceImpl implements IssueService {
 
         String title = req.getTitle() == null ? null : req.getTitle().trim();
         if (title == null || title.isBlank()) {
-            throw new com.taskflow.taskflow_be.exception.AppException(
+            throw new AppException(
                     ErrorCode.BAD_REQUEST,
-                    org.springframework.http.HttpStatus.BAD_REQUEST,
+                    HttpStatus.BAD_REQUEST,
                     "title must not be blank"
             );
         }
@@ -374,5 +525,10 @@ public class IssueServiceImpl implements IssueService {
                 .map(String::trim)
                 .distinct()
                 .toList();
+    }
+
+    private void ensureProject(UUID projectId) {
+        projectRepo.findById(projectId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.PROJECT_NOT_FOUND, "Project not found"));
     }
 }

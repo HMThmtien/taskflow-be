@@ -5,6 +5,7 @@ import com.taskflow.taskflow_be.module.issue.entity.IssueStatus;
 import com.taskflow.taskflow_be.module.issue.entity.IssueType;
 import com.taskflow.taskflow_be.module.sprint.entity.SprintStatus;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
@@ -56,6 +57,21 @@ public class IssueDtos {
     @Getter @Setter
     public static class MoveIssueRequest {
         private IssueStatus status; // required
+    }
+
+    @Getter @Setter
+    public static class BulkUpdateIssueRequest {
+        @NotEmpty
+        private List<UUID> issueIds;
+
+        private IssueStatus status;
+        private IssuePriority priority;
+        private UUID assigneeId;
+        private boolean clearAssignee;
+        private UUID sprintId;
+        private boolean clearSprint;
+        private LocalDate dueDate;
+        private List<String> labels;
     }
 
     @Builder @Getter
