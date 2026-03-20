@@ -3,7 +3,6 @@ package com.taskflow.taskflow_be.storage;
 import com.taskflow.taskflow_be.config.StorageProperties;
 import com.taskflow.taskflow_be.exception.AppException;
 import com.taskflow.taskflow_be.exception.ErrorCode;
-import com.taskflow.taskflow_be.module.issue.entity.IssueAttachmentEntity;
 import io.minio.BucketExistsArgs;
 import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MakeBucketArgs;
@@ -54,16 +53,16 @@ public class MinioFileStorageService implements FileStorageService {
     }
 
     @Override
-    public void delete(IssueAttachmentEntity attachment) {
-        if (attachment.getStorageKey() == null || attachment.getStorageKey().isBlank()) {
+    public void delete(String provider, String bucket, String key, String legacyPath) {
+        if (key == null || key.isBlank()) {
             return;
         }
 
         try {
             minioClient.removeObject(
                     RemoveObjectArgs.builder()
-                            .bucket(resolveBucket(attachment))
-                            .object(attachment.getStorageKey())
+                            .bucket(resolveBucket(bucket))
+                            .object(key)
                             .build()
             );
         } catch (Exception ignored) {
@@ -71,13 +70,13 @@ public class MinioFileStorageService implements FileStorageService {
     }
 
     @Override
-    public String createAccessUrl(IssueAttachmentEntity attachment) {
+    public String createAccessUrl(String provider, String bucket, String key, String legacyPath) {
         try {
             return minioClient.getPresignedObjectUrl(
                     GetPresignedObjectUrlArgs.builder()
                             .method(Method.GET)
-                            .bucket(resolveBucket(attachment))
-                            .object(attachment.getStorageKey())
+                            .bucket(resolveBucket(bucket))
+                            .object(key)
                             .expiry((int) storageProperties.getSignedUrlExpiryMinutes(), TimeUnit.MINUTES)
                             .build()
             );
@@ -105,9 +104,9 @@ public class MinioFileStorageService implements FileStorageService {
         }
     }
 
-    private String resolveBucket(IssueAttachmentEntity attachment) {
-        return attachment.getStorageBucket() == null || attachment.getStorageBucket().isBlank()
+    private String resolveBucket(String bucket) {
+        return bucket == null || bucket.isBlank()
                 ? storageProperties.getS3().getBucket()
-                : attachment.getStorageBucket();
+                : bucket;
     }
 }

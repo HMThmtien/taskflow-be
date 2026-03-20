@@ -3,7 +3,6 @@ package com.taskflow.taskflow_be.storage;
 import com.taskflow.taskflow_be.config.StorageProperties;
 import com.taskflow.taskflow_be.exception.AppException;
 import com.taskflow.taskflow_be.exception.ErrorCode;
-import com.taskflow.taskflow_be.module.issue.entity.IssueAttachmentEntity;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -44,8 +43,7 @@ public class LocalFileStorageService implements FileStorageService {
     }
 
     @Override
-    public void delete(IssueAttachmentEntity attachment) {
-        String key = attachment.getStorageKey();
+    public void delete(String provider, String bucket, String key, String legacyPath) {
         if (key == null || key.isBlank()) {
             return;
         }
@@ -63,10 +61,10 @@ public class LocalFileStorageService implements FileStorageService {
     }
 
     @Override
-    public String createAccessUrl(IssueAttachmentEntity attachment) {
-        if (attachment.getStorageKey() != null && !attachment.getStorageKey().isBlank()) {
-            return "/uploads/" + attachment.getStorageKey();
+    public String createAccessUrl(String provider, String bucket, String key, String legacyPath) {
+        if (key != null && !key.isBlank()) {
+            return "/uploads/" + key;
         }
-        return attachment.getStoragePath();
+        return legacyPath;
     }
 }

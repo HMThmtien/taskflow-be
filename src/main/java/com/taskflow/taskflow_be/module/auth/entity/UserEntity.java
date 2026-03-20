@@ -39,6 +39,15 @@ public class UserEntity extends BaseEntity {
     @Column(name = "avatar_url")
     private String avatarUrl;
 
+    @Column(name = "avatar_storage_provider", length = 32)
+    private String avatarStorageProvider;
+
+    @Column(name = "avatar_storage_bucket", length = 255)
+    private String avatarStorageBucket;
+
+    @Column(name = "avatar_storage_key", length = 500)
+    private String avatarStorageKey;
+
     @Column(name = "bio", length = 5000)
     private String bio;
 
